@@ -23,6 +23,12 @@ annual_return = st.slider("Annual Return (%)", 1.0, 15.0, 7.0) / 100
 life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
 withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
 
+# Display cash flow summary  
+st.subheader("📊 Your Cash Flow Summary")  
+st.write(f"💵 **Projected Savings at Retirement:** ${future_value:,.2f}")  
+st.write(f"💸 **Initial Annual Withdrawal (Age {retirement_age}):** ${withdrawals[0]:,.2f}")  
+st.write(f"📈 **Final Annual Withdrawal (Age {life_expectancy}):** ${withdrawals[-1]:,.2f}")
+
 # Calculations
 years_to_retirement = retirement_age - current_age
 future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
