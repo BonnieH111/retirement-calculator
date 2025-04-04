@@ -15,21 +15,25 @@ st.markdown("""
 # Title & Branding  
 st.title("💰 Retirement Cash Flow Calculator")  
 
-# COMPANY BRANDING  
-st.markdown('<p style="color: #00BFFF; font-size:24px; font-weight:bold;">BHJCF Studio</p>', unsafe_allow_html=True)  
-
-# LOGO - USE "bhjcf-logo.png"  
-try:  
-    logo = Image.open("bhjcf-logo.png")  # 🆕 NEW FILENAME  
-    col1, col2, col3 = st.columns([1,2,1])  
-    with col2:  
-        st.image(logo, width=200)  
-except:  
-    st.warning("⚠️ Logo not found! Upload 'bhjcf-logo.png' to GitHub.")  
+# Logo + Company Name Side-by-Side  
+col_logo, col_name = st.columns([1, 4])  # Logo takes 1/5th space, name 4/5  
+with col_logo:  
+    try:  
+        logo = Image.open("bhjcf-logo.png")  
+        st.image(logo, width=100)  # 🆕 THUMBNAIL SIZE (100px)  
+    except:  
+        st.warning("⚠️ Logo missing!")  
+with col_name:  
+    st.markdown("""  
+    <div style='height: 100px; display: flex; align-items: center;'>  
+        <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>  
+            BHJCF Studio  
+        </p>  
+    </div>  
+    """, unsafe_allow_html=True)  # 🆕 Vertically centers name with logo  
 
 # Client name  
-st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)  
-
+st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 # Inputs  
 current_age = st.slider("Current Age", 25, 100, 45)  
 retirement_age = st.slider("Retirement Age", 50, 100, 65)  
