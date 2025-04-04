@@ -16,22 +16,21 @@ st.markdown("""
 st.title("💰 Retirement Cash Flow Calculator")  
 
 # Logo + Company Name Side-by-Side  
-col_logo, col_name = st.columns([1, 4])  # Logo takes 1/5th space, name 4/5  
+col_logo, col_name = st.columns([1, 3])  # Changed from [1,4] → closer!  
 with col_logo:  
     try:  
         logo = Image.open("bhjcf-logo.png")  
-        st.image(logo, width=100)  # 🆕 THUMBNAIL SIZE (100px)  
+        st.image(logo, width=100)  
     except:  
         st.warning("⚠️ Logo missing!")  
 with col_name:  
     st.markdown("""  
-    <div style='height: 100px; display: flex; align-items: center;'>  
+    <div style='height: 100px; display: flex; align-items: center; margin-left: -20px;'>  # 🆕 NEGATIVE MARGIN  
         <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>  
             BHJCF Studio  
         </p>  
     </div>  
-    """, unsafe_allow_html=True)  # 🆕 Vertically centers name with logo  
-
+    """, unsafe_allow_html=True)
 # Client name  
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 # Inputs  
