@@ -1,7 +1,7 @@
 import streamlit as st  
 from numpy_financial import fv  
 import matplotlib.pyplot as plt  
-from PIL import Image  # 🆕 For handling logos  
+from PIL import Image  
 
 # Custom CSS for colors  
 st.markdown("""  
@@ -15,17 +15,17 @@ st.markdown("""
 # Title & Branding  
 st.title("💰 Retirement Cash Flow Calculator")  
 
-# 🆕 COMPANY BRANDING  
+# COMPANY BRANDING  
 st.markdown('<p style="color: #00BFFF; font-size:24px; font-weight:bold;">BHJCF Studio</p>', unsafe_allow_html=True)  
 
-# 🆕 LOGO - REPLACE "logo.png" WITH YOUR ACTUAL FILENAME  
+# LOGO - USE "bhjcf-logo.png"  
 try:  
-    logo = Image.open("logo.png")  
-    col1, col2, col3 = st.columns([1,2,1])  # Centers logo  
+    logo = Image.open("bhjcf-logo.png")  # 🆕 NEW FILENAME  
+    col1, col2, col3 = st.columns([1,2,1])  
     with col2:  
         st.image(logo, width=200)  
 except:  
-    st.warning("⚠️ Logo not found! Upload 'logo.png' to GitHub.")  
+    st.warning("⚠️ Logo not found! Upload 'bhjcf-logo.png' to GitHub.")  
 
 # Client name  
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)  
