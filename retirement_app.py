@@ -13,7 +13,7 @@ st.markdown("""
 
 # Title  
 st.title("💰 Retirement Cash Flow Calculator")  
-st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Mool</p>', unsafe_allow_html=True)  
+st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)  
 
 # Inputs  
 current_age = st.slider("Current Age", 25, 100, 45)  
