@@ -16,7 +16,7 @@ st.markdown("""
 st.title("💰 Retirement Cash Flow Calculator")  
 
 # Logo + Company Name Side-by-Side  
-col_logo, col_name = st.columns([1, 3])  # Changed from [1,4] → closer!  
+col_logo, col_name = st.columns([1, 3])  # Closer spacing  
 with col_logo:  
     try:  
         logo = Image.open("bhjcf-logo.png")  
@@ -25,13 +25,12 @@ with col_logo:
         st.warning("⚠️ Logo missing!")  
 with col_name:  
     st.markdown("""  
-    <div style='height: 100px; display: flex; align-items: center; margin-left: -20px;'>  # 🆕 NEGATIVE MARGIN  
+    <div style='height: 100px; display: flex; align-items: center; margin-left: -20px;'>  
         <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>  
             BHJCF Studio  
         </p>  
     </div>  
-    """, unsafe_allow_html=True)
-# Client name  
+    """, unsafe_allow_html=True)  # 🚫 Removed visible comment# Client name  
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 # Inputs  
 current_age = st.slider("Current Age", 25, 100, 45)  
