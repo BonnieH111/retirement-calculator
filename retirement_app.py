@@ -1,6 +1,7 @@
 import streamlit as st  
 from numpy_financial import fv  
 import matplotlib.pyplot as plt  
+from PIL import Image  # 🆕 For handling logos  
 
 # Custom CSS for colors  
 st.markdown("""  
@@ -11,8 +12,22 @@ st.markdown("""
 </style>  
 """, unsafe_allow_html=True)  
 
-# Title  
+# Title & Branding  
 st.title("💰 Retirement Cash Flow Calculator")  
+
+# 🆕 COMPANY BRANDING  
+st.markdown('<p style="color: #00BFFF; font-size:24px; font-weight:bold;">BHJCF Studio</p>', unsafe_allow_html=True)  
+
+# 🆕 LOGO - REPLACE "logo.png" WITH YOUR ACTUAL FILENAME  
+try:  
+    logo = Image.open("logo.png")  
+    col1, col2, col3 = st.columns([1,2,1])  # Centers logo  
+    with col2:  
+        st.image(logo, width=200)  
+except:  
+    st.warning("⚠️ Logo not found! Upload 'logo.png' to GitHub.")  
+
+# Client name  
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)  
 
 # Inputs  
@@ -28,18 +43,17 @@ years_to_retirement = retirement_age - current_age
 future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)  
 years_in_retirement = life_expectancy - retirement_age  
 
-# 🛠️ ERROR CHECKING 🛠️  
+# Error checking  
 if years_in_retirement <= 0:  
     st.error("❌ Life expectancy must be GREATER than retirement age!")  
     st.stop()  
 
-# 🛠️ FIXED WITHDRAWALS FORMULA 🛠️  
 withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year for year in range(years_in_retirement)]  
 
 # Cash Flow Text Boxes  
 st.subheader("Your Spending Money:")  
 st.write(f"💰 **At retirement, you'll have:** R{future_value:,.2f}")  
-st.write(f"💸 **You can spend this much per year:** R{withdrawals[0]:,.2f} (grows with returns!)")  # Updated text  
+st.write(f"💸 **You can spend this much per year:** R{withdrawals[0]:,.2f} (grows with returns!)")  
 
 # Plot  
 fig, ax = plt.subplots(figsize=(10, 5))  
