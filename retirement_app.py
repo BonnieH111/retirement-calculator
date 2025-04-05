@@ -18,7 +18,7 @@ st.markdown("""<style>
 # ======================
 # BRANDING
 # ======================
-st.title("💰 Retirement Cash Flow Calculator")  # ✅ RESTORED TITLE
+st.title("💰 Retirement Cash Flow Calculator")
 
 col_logo, col_name = st.columns([1, 3])
 with col_logo:
@@ -77,13 +77,14 @@ with tab1:
 
 with tab2:
     # ======================
-    # LIVING ANNUITY INPUTS
+    # LIVING ANNUITY INPUTS (UPDATED 🔴)
     # ======================
     col1, col2 = st.columns(2)
     with col1:
         la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
     with col2:
-        la_retirement_age = st.slider("Retirement Age", 50, 100, 65, key="la_retire")
+        # 🔴 Changed minimum retirement age to 55
+        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  
     
     # Immediate validation check
     if la_retirement_age <= la_current_age:
@@ -118,7 +119,8 @@ with tab2:
         # RESULTS DISPLAY
         # ======================
         st.subheader("💰 Monthly Income Estimate")
-        st.write(f"**Initial Monthly Drawdown:** R{monthly_income:,.2f}")
+        # 🔴 Changed from $ to R in all display text
+        st.write(f"**Initial Monthly Drawdown:** R{monthly_income:,.2f}")  
         
         st.subheader("⏳ Savings Longevity")
         if year_count >= 50:
@@ -126,7 +128,7 @@ with tab2:
         else:
             st.warning(f"⚠️ Savings depleted at age {la_retirement_age + year_count}")
         
-        # 🔴 FIXED: REMOVED DUPLICATE VISUALIZATION CODE
+        # Visualization
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(depletion_years, balances, color='#228B22', linewidth=2)
         ax.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
