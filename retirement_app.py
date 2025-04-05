@@ -18,6 +18,8 @@ st.markdown("""<style>
 # ======================
 # BRANDING
 # ======================
+st.title("💰 Retirement Cash Flow Calculator")  # ✅ RESTORED TITLE
+
 col_logo, col_name = st.columns([1, 3])
 with col_logo:
     try:
@@ -37,7 +39,7 @@ st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</
 # ======================
 tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
-with tab1:  # START OF TAB1 CONTENT
+with tab1:
     # ======================
     # ORIGINAL RETIREMENT CALCULATOR CODE
     # ======================
@@ -73,7 +75,7 @@ with tab1:  # START OF TAB1 CONTENT
     ax.set_ylabel("Annual Income (R)", color='#FF5E00')
     st.pyplot(fig)
 
-with tab2:  # START OF TAB2 CONTENT
+with tab2:
     # ======================
     # LIVING ANNUITY INPUTS
     # ======================
@@ -124,7 +126,7 @@ with tab2:  # START OF TAB2 CONTENT
         else:
             st.warning(f"⚠️ Savings depleted at age {la_retirement_age + year_count}")
         
-        # Longevity visualization
+        # 🔴 FIXED: REMOVED DUPLICATE VISUALIZATION CODE
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(depletion_years, balances, color='#228B22', linewidth=2)
         ax.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
@@ -132,14 +134,3 @@ with tab2:  # START OF TAB2 CONTENT
         ax.set_xlabel("Age", color='#228B22')
         ax.set_ylabel("Remaining Balance (R)", color='#FF5E00')
         st.pyplot(fig)
-            
-            # Longevity visualization
-            fig, ax = plt.subplots(figsize=(10,4))
-            ax.plot(depletion_years, balances, color='#228B22', linewidth=2)
-            ax.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
-            ax.set_title("Investment Balance Projection", color='#00BFFF')
-            ax.set_xlabel("Age", color='#228B22')
-            ax.set_ylabel("Remaining Balance (R)", color='#FF5E00')
-            st.pyplot(fig)
-
-# [KEEP YOUR EXISTING RETIREMENT PLOT CODE]
