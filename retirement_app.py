@@ -11,44 +11,56 @@ st.set_page_config(layout="wide")
 # Custom CSS for colors
 st.markdown("""<style>
 .stSlider>div>div>div>div { background: #7FFF00 !important; }
-.custom-r { color: #FF5E00 !important; font-size: 28px; font-weight: bold; }
-.stButton>button { background-color: #00BFFF; color: white; font-weight: bold; }
-.logo-container { margin-left: -15px !important; }
-</style>""", unsafe_allow_html=True)  # 🔴 Added logo spacing fix
+.custom-r { 
+    color: #FF5E00 !important; 
+    font-size: 32px; 
+    font-weight: 900;
+    display: inline-block;
+    margin: 0 5px;
+}
+.logo-column { padding-right: 0px !important; }
+.company-name { margin-left: -15px !important; }
+</style>""", unsafe_allow_html=True)
 
 # ======================
-# BRANDING (FIXED)
+# BRANDING (FINAL VERSION) 🔴
 # ======================
-st.title("🅁 Retirement Cash Flow Calculator")  # 🔴 Changed to stylized R
+st.markdown("""
+<h1 style='text-align: center; margin-bottom: 20px;'>
+    <span style='font-size: 34px'>💰</span>
+    <span class="custom-r">R</span>
+    <span style='font-size: 32px; color: #00BFFF;'>Retirement Cash Flow Calculator</span>
+</h1>
+""", unsafe_allow_html=True)  # 🔴 Money bag + Orange R + Blue text
 
-# Centered logo and company name
-col1, col2, col3 = st.columns([1, 2, 1])
+# Logo and company name - optimized spacing
+col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
-    logo_container = st.container()
-    with logo_container:
-        # 🔴 Tightened column spacing
-        cols = st.columns([3, 4])  # Was [2,3]
-        with cols[0]:
-            try:
-                logo = Image.open("bhjcf-logo.png")
-                st.image(logo, width=80)  # 🔴 Reduced logo size
-            except:
-                st.warning("⚠️ Logo missing!")
-        with cols[1]:
-            st.markdown("""
-            <div style='height: 80px; display: flex; align-items: center; margin-left: -10px;'>
-                <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
-                    BHJCF Studio
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+    container = st.container()
+    cols = container.columns([4, 5])  # 🔴 Tighter column ratio
+    with cols[0]:
+        try:
+            logo = Image.open("bhjcf-logo.png")
+            st.image(logo, width=70)  # 🔴 Smaller logo
+        except:
+            st.warning("⚠️ Logo missing!")
+    with cols[1]:
+        st.markdown("""
+        <div class="company-name" style='height: 70px; display: flex; align-items: center;'>
+            <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+                BHJCF Studio
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
+st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
 # CALCULATOR TABS 
 # ======================
 tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
+
+# ... [REST OF YOUR CODE REMAINS UNCHANGED] ...
 
 # ... [REST OF YOUR CODE REMAINS EXACTLY THE SAME] ...
 
