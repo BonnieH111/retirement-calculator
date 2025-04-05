@@ -61,9 +61,6 @@ st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Clien
 tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
 # ... [REST OF YOUR CODE REMAINS UNCHANGED] ...
-
-# ... [REST OF YOUR CODE REMAINS EXACTLY THE SAME] ...
-
 with tab1:
     # ======================
     # RETIREMENT CALCULATOR 
