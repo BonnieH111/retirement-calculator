@@ -12,12 +12,13 @@ st.set_page_config(layout="wide")
 st.markdown("""<style>
 .stSlider>div>div>div>div { background: #7FFF00 !important; }
 .custom-r { color: #FF5E00 !important; font-size: 28px; font-weight: bold; }
+.stButton>button { background-color: #00BFFF; color: white; font-weight: bold; }
 </style>""", unsafe_allow_html=True)
 
 # ======================
 # BRANDING (UPDATED 🔴)
 # ======================
-st.title("📊 Retirement Cash Flow Calculator")
+st.title("💰 Retirement Cash Flow Calculator")
 
 # Centered logo and company name
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -43,13 +44,13 @@ with col2:
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
-# CALCULATOR TABS
+# CALCULATOR TABS (FIXED 🔴)
 # ======================
-tab1, tab2 = st.tabs(["💼 Retirement Planner", "📈 Annuity Simulator"])
+tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
 with tab1:
     # ======================
-    # RETIREMENT CALCULATOR (UPDATED 🔴)
+    # RETIREMENT CALCULATOR 
     # ======================
     current_age = st.slider("Current Age", 25, 100, 45)
     retirement_age = st.slider("Retirement Age", 50, 100, 65)
@@ -69,7 +70,7 @@ with tab1:
 
     withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year for year in range(years_in_retirement)]
 
-    # Results (UPDATED 🔴)
+    # Results 
     st.subheader("Your Spending Plan")
     st.markdown(f"""
     <div style='margin: 20px 0;'>
@@ -96,7 +97,7 @@ with tab1:
 
 with tab2:
     # ======================
-    # LIVING ANNUITY CALCULATOR (UPDATED 🔴)
+    # LIVING ANNUITY CALCULATOR (FIXED 🔴)
     # ======================
     col1, col2 = st.columns(2)
     with col1:
@@ -112,7 +113,12 @@ with tab2:
     la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return")/100
     withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
 
-    if st.button("🚀 Calculate Projections", key="la_btn"):
+    # 🔴 MADE BUTTON MORE VISIBLE
+    calculate_btn = st.button("🚀 CALCULATE LIVING ANNUITY PROJECTIONS", 
+                            key="la_btn",
+                            help="Click to generate your retirement income plan")
+    
+    if calculate_btn:
         monthly_income = investment * withdrawal_rate / 12
         
         # Simulation
@@ -128,7 +134,7 @@ with tab2:
             balances.append(balance)
             year_count += 1
 
-        # Results (UPDATED 🔴)
+        # Results 
         st.subheader("Projection Results")
         st.markdown(f"""
         <div style='margin: 20px 0;'>
