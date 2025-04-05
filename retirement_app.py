@@ -27,6 +27,27 @@ st.markdown("""<style>
     margin-left: -25px !important;
     padding-left: 0 !important;
 }
+/* New Enhancements */
+[data-testid="column"]:nth-of-type(1) { 
+    justify-content: center !important;
+}
+h1 { 
+    letter-spacing: -0.5px !important; 
+    margin-bottom: 12px !important;
+}
+img:hover {
+    transform: scale(1.03);
+    transition: transform 0.2s ease-in-out;
+}
+.certification-badge {
+    padding: 4px 12px;
+    border-radius: 15px;
+    background: linear-gradient(45deg, #00BFFF, #7FFF00);
+    color: white !important;
+    font-weight: 600;
+    display: inline-block;
+    margin-top: -8px;
+}
 </style>""", unsafe_allow_html=True)
 
 # ======================
@@ -59,9 +80,15 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
+# Client info with certification badge
+st.markdown("""
+<div style='text-align: center; margin-bottom: 25px;'>
+    <p style='color:#FF0000; font-size:20px; margin: 0;'>Client: Juanita Moolman</p>
+    <div class="certification-badge">Version 2.1 | Certified Retirement Specialist</div>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
-
+# Rest of your calculator tabs remain unchanged...
 # ======================
 # CALCULATOR TABS 
 # ======================
