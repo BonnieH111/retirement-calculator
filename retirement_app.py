@@ -16,32 +16,38 @@ st.markdown("""<style>
     font-size: 32px; 
     font-weight: 900;
     display: inline-block;
-    margin: 0 5px;
+    margin: 0 2px;
 }
-.logo-column { padding-right: 0px !important; }
-.company-name { margin-left: -15px !important; }
+.logo-column { 
+    padding-right: 0px !important;
+    display: flex;
+    align-items: center;
+}
+.company-name { 
+    margin-left: -25px !important;
+    padding-left: 0 !important;
+}
 </style>""", unsafe_allow_html=True)
 
 # ======================
-# BRANDING (FINAL VERSION) 🔴
+# BRANDING (OPTIMIZED SPACING)
 # ======================
 st.markdown("""
 <h1 style='text-align: center; margin-bottom: 20px;'>
-    <span style='font-size: 34px'>💰</span>
     <span class="custom-r">R</span>
     <span style='font-size: 32px; color: #00BFFF;'>Retirement Cash Flow Calculator</span>
 </h1>
-""", unsafe_allow_html=True)  # 🔴 Money bag + Orange R + Blue text
+""", unsafe_allow_html=True)
 
-# Logo and company name - optimized spacing
+# Logo and company name - tighter spacing
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
     container = st.container()
-    cols = container.columns([4, 5])  # 🔴 Tighter column ratio
+    cols = container.columns([2, 7])  # Adjusted column ratio
     with cols[0]:
         try:
             logo = Image.open("bhjcf-logo.png")
-            st.image(logo, width=70)  # 🔴 Smaller logo
+            st.image(logo, width=65)  # Slightly smaller logo
         except:
             st.warning("⚠️ Logo missing!")
     with cols[1]:
@@ -53,6 +59,7 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
+
 st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
@@ -60,7 +67,6 @@ st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Clien
 # ======================
 tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
-# ... [REST OF YOUR CODE REMAINS UNCHANGED] ...
 with tab1:
     # ======================
     # RETIREMENT CALCULATOR 
