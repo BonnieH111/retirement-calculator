@@ -11,37 +11,45 @@ st.set_page_config(layout="wide")
 # Custom CSS for colors
 st.markdown("""<style>
 .stSlider>div>div>div>div { background: #7FFF00 !important; }
-.st-b7 { color: #FF5E00; }
-.st-c0 { background-color: #00BFFF; }
+.custom-r { color: #FF5E00 !important; font-size: 28px; font-weight: bold; }
 </style>""", unsafe_allow_html=True)
 
 # ======================
-# BRANDING
+# BRANDING (UPDATED 🔴)
 # ======================
-st.title("💰 Retirement Cash Flow Calculator")
+st.title("📊 Retirement Cash Flow Calculator")
 
-col_logo, col_name = st.columns([1, 3])
-with col_logo:
-    try:
-        logo = Image.open("bhjcf-logo.png")
-        st.image(logo, width=100)
-    except:
-        st.warning("⚠️ Logo missing!")
-with col_name:
-    st.markdown("""<div style='height: 100px; display: flex; align-items: center; margin-left: -20px;'>
-        <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>BHJCF Studio</p>
-    </div>""", unsafe_allow_html=True)
+# Centered logo and company name
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    logo_container = st.container()
+    with logo_container:
+        cols = st.columns([2, 3])
+        with cols[0]:
+            try:
+                logo = Image.open("bhjcf-logo.png")
+                st.image(logo, width=100)
+            except:
+                st.warning("⚠️ Logo missing!")
+        with cols[1]:
+            st.markdown("""
+            <div style='height: 100px; display: flex; align-items: center;'>
+                <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+                    BHJCF Studio
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
 st.markdown('<p style="color:#FF0000; font-size:20px;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
 # CALCULATOR TABS
 # ======================
-tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
+tab1, tab2 = st.tabs(["💼 Retirement Planner", "📈 Annuity Simulator"])
 
 with tab1:
     # ======================
-    # ORIGINAL RETIREMENT CALCULATOR CODE
+    # RETIREMENT CALCULATOR (UPDATED 🔴)
     # ======================
     current_age = st.slider("Current Age", 25, 100, 45)
     retirement_age = st.slider("Retirement Age", 50, 100, 65)
@@ -61,48 +69,53 @@ with tab1:
 
     withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year for year in range(years_in_retirement)]
 
-    # Results
-    st.subheader("Your Spending Money:")
-    st.write(f"💰 **At retirement, you'll have:** R{future_value:,.2f}")
-    st.write(f"💸 **You can spend this much per year:** R{withdrawals[0]:,.2f} (grows with returns!)")
+    # Results (UPDATED 🔴)
+    st.subheader("Your Spending Plan")
+    st.markdown(f"""
+    <div style='margin: 20px 0;'>
+        <span class="custom-r">R</span> 
+        <span style='font-size: 18px;'>At retirement value: </span>
+        <span style='color: #00BFFF; font-weight: bold;'>R{future_value:,.2f}</span>
+    </div>
+    <div style='margin: 20px 0;'>
+        <span class="custom-r">R</span> 
+        <span style='font-size: 18px;'>Annual withdrawal: </span>
+        <span style='color: #FF5E00; font-weight: bold;'>R{withdrawals[0]:,.2f}</span>
+        <span style='font-size: 14px; color: #666;'>(3% annual growth)</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     # Plot
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
     ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
-    ax.set_title("Post-Retirement Cash Flow", color='#00BFFF')
+    ax.set_title("Retirement Income Projection", color='#00BFFF')
     ax.set_xlabel("Age", color='#228B22')
     ax.set_ylabel("Annual Income (R)", color='#FF5E00')
     st.pyplot(fig)
 
 with tab2:
     # ======================
-    # LIVING ANNUITY INPUTS (UPDATED 🔴)
+    # LIVING ANNUITY CALCULATOR (UPDATED 🔴)
     # ======================
     col1, col2 = st.columns(2)
     with col1:
         la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
     with col2:
-        # 🔴 Changed minimum retirement age to 55
-        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  
+        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  # Min 55
     
-    # Immediate validation check
     if la_retirement_age <= la_current_age:
         st.error("❌ Retirement age must be AFTER current age!")
         st.stop()
 
-    investment = st.number_input("Total Investment Savings (R)", value=5000000, key="la_invest")
-    la_return = st.slider("Annual Investment Return (%)", 1.0, 20.0, 7.0, key="la_return")/100
+    investment = st.number_input("Total Investment (R)", value=5000000, key="la_invest")
+    la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return")/100
     withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
 
-    # ======================
-    # CALCULATIONS
-    # ======================
-    if st.button("🚀 Calculate Income", key="la_btn"):
-        # Monthly income calculation
+    if st.button("🚀 Calculate Projections", key="la_btn"):
         monthly_income = investment * withdrawal_rate / 12
         
-        # Depletion simulation
+        # Simulation
         balance = investment
         year_count = 0
         depletion_years = []
@@ -115,24 +128,31 @@ with tab2:
             balances.append(balance)
             year_count += 1
 
-        # ======================
-        # RESULTS DISPLAY
-        # ======================
-        st.subheader("💰 Monthly Income Estimate")
-        # 🔴 Changed from $ to R in all display text
-        st.write(f"**Initial Monthly Drawdown:** R{monthly_income:,.2f}")  
+        # Results (UPDATED 🔴)
+        st.subheader("Projection Results")
+        st.markdown(f"""
+        <div style='margin: 20px 0;'>
+            <span class="custom-r">R</span> 
+            <span style='font-size: 18px;'>Monthly income: </span>
+            <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        longevity_text = f"✅ Funds last beyond age {la_retirement_age + 50}" if year_count >= 50 \
+            else f"⚠️ Funds depleted at age {la_retirement_age + year_count}"
         
-        st.subheader("⏳ Savings Longevity")
-        if year_count >= 50:
-            st.success(f"✅ Savings projected to last beyond age {la_retirement_age + 50}")
-        else:
-            st.warning(f"⚠️ Savings depleted at age {la_retirement_age + year_count}")
-        
+        st.markdown(f"""
+        <div style='margin: 25px 0; padding: 15px; border-radius: 8px; 
+                    background-color: {"#e6f4ea" if year_count >=50 else "#fff3cd"};">
+            <span style='font-size: 16px;'>{longevity_text}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
         # Visualization
         fig, ax = plt.subplots(figsize=(10,4))
         ax.plot(depletion_years, balances, color='#228B22', linewidth=2)
         ax.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
-        ax.set_title("Investment Balance Projection", color='#00BFFF')
+        ax.set_title("Investment Balance Timeline", color='#00BFFF')
         ax.set_xlabel("Age", color='#228B22')
         ax.set_ylabel("Remaining Balance (R)", color='#FF5E00')
         st.pyplot(fig)
