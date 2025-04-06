@@ -2,6 +2,7 @@ import streamlit as st
 from numpy_financial import fv, pmt
 import matplotlib.pyplot as plt
 from PIL import Image
+from fpdf import FPDF
 
 # ======================
 # APP CONFIGURATION
@@ -59,7 +60,6 @@ with col2:
         </div>
         """, unsafe_allow_html=True)
 
-
 st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
@@ -114,15 +114,38 @@ with tab1:
     ax.set_ylabel("Annual Income (R)", color='#FF5E00')
     st.pyplot(fig)
 
+    # PDF export button
+    if st.button("Export PDF Report"):
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+
+        pdf.image("bhjcf-logo.png", x=10, y=8, w=30)
+        pdf.ln(20)
+        pdf.cell(200, 10, txt="Retirement Cash Flow Report for Juanita Moolman", ln=True, align="C")
+        pdf.ln(10)
+        pdf.cell(100, 10, txt=f"Client: Juanita Moolman", ln=True)
+        pdf.cell(100, 10, txt=f"Current Age: {current_age}", ln=True)
+        pdf.cell(100, 10, txt=f"Retirement Age: {retirement_age}", ln=True)
+        pdf.cell(100, 10, txt=f"Current Savings: R{retirement_savings:,.2f}", ln=True)
+        pdf.cell(100, 10, txt=f"Annual Return: {annual_return * 100}%", ln=True)
+        pdf.cell(100, 10, txt=f"Life Expectancy: {life_expectancy}", ln=True)
+        pdf.cell(100, 10, txt=f"Withdrawal Rate: {withdrawal_rate * 100}%", ln=True)
+        pdf.cell(100, 10, txt=f"Future Value at Retirement: R{future_value:,.2f}", ln=True)
+        pdf.cell(100, 10, txt=f"Annual Withdrawal: R{withdrawals[0]:,.2f}", ln=True)
+        
+        pdf.output("Retirement_Cash_Flow_Report.pdf")
+        st.download_button("Download PDF", data=open("Retirement_Cash_Flow_Report.pdf", "rb").read(), file_name="Retirement_Cash_Flow_Report.pdf", mime="application/pdf")
+
 with tab2:
     # ======================
-    # LIVING ANNUITY CALCULATOR (FIXED 🔴)
+    # LIVING ANNUITY CALCULATOR 
     # ======================
     col1, col2 = st.columns(2)
     with col1:
         la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
     with col2:
-        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  # Min 55
+        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  
     
     if la_retirement_age <= la_current_age:
         st.error("❌ Retirement age must be AFTER current age!")
@@ -132,10 +155,8 @@ with tab2:
     la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return")/100
     withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
 
-    # 🔴 MADE BUTTON MORE VISIBLE
     calculate_btn = st.button("🚀 CALCULATE LIVING ANNUITY PROJECTIONS", 
-                            key="la_btn",
-                            help="Click to generate your retirement income plan")
+                            key="la_btn")
     
     if calculate_btn:
         monthly_income = investment * withdrawal_rate / 12
@@ -168,7 +189,7 @@ with tab2:
         
         st.markdown(f"""
         <div style='margin: 25px 0; padding: 15px; border-radius: 8px; 
-                    background-color: {"#e6f4ea" if year_count >=50 else "#fff3cd"};">
+                    background-color: {"#e6f4ea" if year_count >=50 else "#fff3cd"};'>
             <span style='font-size: 16px;'>{longevity_text}</span>
         </div>
         """, unsafe_allow_html=True)
@@ -180,4 +201,4 @@ with tab2:
         ax.set_title("Investment Balance Timeline", color='#00BFFF')
         ax.set_xlabel("Age", color='#228B22')
         ax.set_ylabel("Remaining Balance (R)", color='#FF5E00')
-        st.pyplot(fig) 
+        st.pyplot(fig)
