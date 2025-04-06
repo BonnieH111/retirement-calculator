@@ -1,7 +1,12 @@
 # retirement_app.py
+# ====================== ADD THIS AT VERY TOP ======================
+import matplotlib
+matplotlib.use('Agg')  # CRITICAL FOR STREAMLIT CLOUD
+# ===================================================================
+
 import streamlit as st
 from numpy_financial import fv, pmt
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # KEEP THIS AFTER matplotlib.use()
 from PIL import Image
 from fpdf import FPDF
 import os
