@@ -61,7 +61,7 @@ col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
     st.markdown("""
     <div style='display: flex; justify-content: center; align-items: center;'>
-        <img src="bhjcf-logo.png" width="65" style='margin-right: 10px;'>
+        <img src="data:image/png;base64,{base64.b64encode(open("bhjcf-logo.png", "rb").read()).decode()}" width="65" style='margin-right: 10px;'>
         <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
             BHJCF Studio
         </p>
@@ -245,7 +245,7 @@ with tab2:
         """, unsafe_allow_html=True)
 
         # Visualization
-        fig_la, ax_la = plt.subplots(figsize=(10,6))
+        fig_la, ax_la = plt.subplots(ffig_la, ax_la = plt.subplots(figsize=(10,6))
         ax_la.plot(depletion_years, balances, color='#228B22', linewidth=2)
         ax_la.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
         ax_la.set_title("Investment Balance Timeline", color='#00BFFF')
