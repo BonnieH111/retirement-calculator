@@ -162,7 +162,7 @@ with tab1:
                 
                 for label, value in data:
                     pdf.cell(90, 10, label, border=0)
-                    pdf.c cell(0, 10, str(value), ln=1)
+                    pdf.cell(0, 10, str(value), ln=1)
                 
                 # Add graph
                 pdf.image(tmp_graph.name, x=10, y=140, w=190)
