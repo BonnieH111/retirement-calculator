@@ -144,7 +144,7 @@ with tab1:
                 
                 # Client Info
                 pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
+                pdf.c cell(0, 10, "Client: Juanita Moolman", ln=1)
                 pdf.ln(5)
                 
                 # Data Table
@@ -319,3 +319,4 @@ with tab2:
                             )
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
+
