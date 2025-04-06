@@ -133,24 +133,23 @@ with tab1:
                 pdf.set_font("Arial", 'B', 16)
                 
                 # Centered Logo & Company Name
-pdf.image("bhjcf-logo.png", x=(210-30)/2, y=10, w=30)
-pdf.set_y(40)
-pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
+                pdf.image("bhjcf-logo.png", x=(210-30)/2, y=10, w=30)
+                pdf.set_y(40)
+                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
 
-# Report Title
-pdf.set_font("Arial", 'B', 20)
-pdf.cell(0, 15, "Retirement Cash Flow Report", ln=1, align='C')
-pdf.ln(10)
+                # Report Title
+                pdf.set_font("Arial", 'B', 20)
+                pdf.cell(0, 15, "Retirement Cash Flow Report", ln=1, align='C')
+                pdf.ln(10)
 
-# Client Info
-pdf.set_font("Arial", 'B', 12)
-pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
-pdf.ln(5)
+                # Client Info
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
+                pdf.ln(5)
 
-# Data Table
-pdf.set_font("Arial", size=12)
-data = [
-
+                # Data Table
+                pdf.set_font("Arial", size=12)
+                data = [
                     ("Current Age", current_age),
                     ("Retirement Age", retirement_age),
                     ("Current Savings", f"R{retirement_savings:,.2f}"),
@@ -320,4 +319,5 @@ with tab2:
                             )
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
+
 
