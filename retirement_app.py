@@ -257,14 +257,31 @@ with tab2:
         st.pyplot(fig_la)
         plt.close()
 
-    # ============== NEW PDF SECTION STARTS HERE ==============
-    if 'balances' in locals():  # Only show if calculations exist
-        if st.button("📄 Generate Living Annuity PDF Report"):
+        # Store calculation results in session state
+        st.session_state.la_data = {
+            'depletion_years': depletion_years,
+            'balances': balances,
+            'monthly_income': monthly_income,
+            'longevity_text': longevity_text,
+            'investment': investment,
+            'la_return': la_return,
+            'withdrawal_rate': withdrawal_rate,
+            'la_current_age': la_current_age,
+            'la_retirement_age': la_retirement_age
+        }
+
+    # PDF Generation
+    if st.button("📄 Generate Living Annuity PDF Report"):
+        if 'la_data' in st.session_state:
             try:
+                data = st.session_state.la_data
+                
                 # Create new figure for PDF
                 fig_pdf, ax_pdf = plt.subplots(figsize=(10,6))
-                ax_pdf.plot(depletion_years, balances, color='#228B22', linewidth=2)
-                ax_pdf.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+                ax_pdf.plot(data['depletion_years'], data['balances'], 
+                           color='#228B22', linewidth=2)
+                ax_pdf.fill_between(data['depletion_years'], data['balances'], 
+                                   color='#7FFF00', alpha=0.3)
                 ax_pdf.set_title("Investment Balance Timeline", color='#00BFFF')
                 ax_pdf.set_xlabel("Age", color='#228B22')
                 ax_pdf.set_ylabel("Remaining Balance (R)", color='#FF5E00')
@@ -294,17 +311,17 @@ with tab2:
                     
                     # Data Table
                     pdf.set_font("Arial", size=12)
-                    data = [
-                        ("Current Age", la_current_age),
-                        ("Retirement Age", la_retirement_age),
-                        ("Total Investment", f"R{investment:,.2f}"),
-                        ("Annual Return", f"{la_return*100:.1f}%"),
-                        ("Withdrawal Rate", f"{withdrawal_rate*100:.1f}%"),
-                        ("Monthly Income", f"R{monthly_income:,.2f}"),
-                        ("Projection Outlook", longevity_text)
+                    data_table = [
+                        ("Current Age", data['la_current_age']),
+                        ("Retirement Age", data['la_retirement_age']),
+                        ("Total Investment", f"R{data['investment']:,.2f}"),
+                        ("Annual Return", f"{data['la_return']*100:.1f}%"),
+                        ("Withdrawal Rate", f"{data['withdrawal_rate']*100:.1f}%"),
+                        ("Monthly Income", f"R{data['monthly_income']:,.2f}"),
+                        ("Projection Outlook", data['longevity_text'])
                     ]
                     
-                    for label, value in data:
+                    for label, value in data_table:
                         pdf.cell(90, 10, label, border=0)
                         pdf.cell(0, 10, str(value), ln=1)
                     
@@ -332,3 +349,6 @@ with tab2:
                 plt.close(fig_pdf)
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
+        else:
+            st.warning("⚠️ Please calculate projections first!")
+
