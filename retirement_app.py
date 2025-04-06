@@ -124,36 +124,41 @@ with tab1:
     st.pyplot(fig)
     plt.close()
 
-        # Generate PDF with preview (UPDATED)
+        # Generate PDF with preview (FINAL CENTERED VERSION)
     if st.button("📄 Generate PDF Report"):
         try:
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig.savefig(tmp_graph.name, dpi=300)
                 
-                # PDF Setup with Centering
-                pdf = FPDF(orientation='P')  # Explicit portrait mode
+                # PDF Setup with Full Centering
+                pdf = FPDF(orientation='P', format='A4')  # Explicit A4 portrait
                 pdf.add_page()
+                pdf.set_auto_page_break(auto=False)  # Manual positioning
                 pdf.set_font("Arial", 'B', 16)
-                page_width = pdf.w  # Get portrait width (210mm)
+                page_width = pdf.w  # 210mm for A4 portrait
+
+                # --- Centered Header Section ---
+                # Logo centered with 15mm top margin
+                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=15, w=30)
+                # Company name centered below logo
+                pdf.set_xy(0, 45)
+                pdf.cell(page_width, 10, "BHJCF Studio", align='C')
                 
-                # Centered Logo & Name
-                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=10, w=30)
-                pdf.set_y(40)
-                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
-
-                # Title
+                # --- Centered Title Section ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.cell(0, 15, "Retirement Cash Flow Report", ln=1, align='C')
-                pdf.ln(15)
-
-                # Client Info Centered
+                pdf.set_y(60)  # 15mm below company name
+                pdf.cell(page_width, 15, "Retirement Cash Flow Report", align='C')
+                
+                # --- Centered Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1, align='C')
-                pdf.ln(10)
+                pdf.set_y(80)  # 20mm below title
+                pdf.cell(page_width, 10, "Client: Juanita Moolman", align='C')
 
-                # Data Table with Alignment
+                # --- Centered Data Table ---
                 pdf.set_font("Arial", size=12)
-                col_width = page_width/2.8  # Portrait column width
+                pdf.set_y(95)  # 15mm below client info
+                col_width = 80  # Fixed width for alignment
+                
                 data = [
                     ("Current Age", current_age),
                     ("Retirement Age", retirement_age),
@@ -165,14 +170,21 @@ with tab1:
                     ("First Year Withdrawal", f"R{withdrawals[0]:,.2f}")
                 ]
                 
-                # Aligned Columns
+                # Center table on page
+                table_start_x = (page_width - (col_width * 2)) / 2
                 for label, value in data:
+                    pdf.set_x(table_start_x)
                     pdf.cell(col_width, 10, label, border=0, align='R')
-                    pdf.cell(col_width, 10, str(value), ln=1, align='L')
-                
-                # Centered Graph
-                img_width = 180  # Adjusted for portrait
-                pdf.image(tmp_graph.name, x=(page_width - img_width)/2, y=140, w=img_width)
+                    pdf.cell(col_width, 10, str(value), align='L')
+                    pdf.ln(10)
+
+                # --- Centered Graph ---
+                img_width = 180  # 180mm width for 10mm side margins
+                y_position = pdf.get_y() + 10  # 10mm below table
+                pdf.image(tmp_graph.name, 
+                         x=(page_width - img_width)/2,  # Center horizontally
+                         y=y_position, 
+                         w=img_width)
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
