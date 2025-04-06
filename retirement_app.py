@@ -51,17 +51,17 @@ logo = load_logo()
 
 st.markdown("""
 <h1 style='text-align: center; margin-bottom: 20px;'>
-    <span class="custom-r">R</span>
+    📊 <span class="custom-r">R</span>
     <span style='font-size: 32px; color: #00BFFF;'>Retirement Cash Flow Calculator</span>
 </h1>
 """, unsafe_allow_html=True)
 
-# Centered Logo and Company Name
+# Centered Logo and Company Name on the Same Line
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
-    st.image(logo, width=100)
     st.markdown("""
-    <div style='text-align: center;'>
+    <div style='display: flex; justify-content: center; align-items: center;'>
+        <img src="bhjcf-logo.png" width="65" style='margin-right: 10px;'>
         <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
             BHJCF Studio
         </p>
@@ -112,12 +112,13 @@ with tab1:
     </div>
     """, unsafe_allow_html=True)
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 6))  # Adjusted height to prevent cutoff
     ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
     ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
     ax.set_title("Retirement Income Projection", color='#00BFFF')
     ax.set_xlabel("Age", color='#228B22')
     ax.set_ylabel("Annual Income (R)", color='#FF5E00')
+    plt.tight_layout()  # Ensures the graph fits properly
     st.pyplot(fig)
     plt.close()
 
@@ -161,7 +162,7 @@ with tab1:
                 
                 for label, value in data:
                     pdf.cell(90, 10, label, border=0)
-                    pdf.cell(0, 10, str(value), ln=1)
+                    pdf.c cell(0, 10, str(value), ln=1)
                 
                 # Add graph
                 pdf.image(tmp_graph.name, x=10, y=140, w=190)
@@ -227,9 +228,9 @@ with tab2:
         st.subheader("Projection Results")
         st.markdown(f"""
         <div style='margin: 20px 0;'>
-        <span class="custom-r">R</span> 
-        <span style='font-size: 18px;'>Monthly income: </span>
-        <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
+            <span class="custom-r">R</span> 
+            <span style='font-size: 18px;'>Monthly income: </span>
+            <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -244,12 +245,13 @@ with tab2:
         """, unsafe_allow_html=True)
 
         # Visualization
-        fig_la, ax_la = plt.subplots(figsize=(10,4))
+        fig_la, ax_la = plt.subplots(figsize=(10,6))
         ax_la.plot(depletion_years, balances, color='#228B22', linewidth=2)
         ax_la.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
         ax_la.set_title("Investment Balance Timeline", color='#00BFFF')
         ax_la.set_xlabel("Age", color='#228B22')
         ax_la.set_ylabel("Remaining Balance (R)", color='#FF5E00')
+        plt.tight_layout()  # Ensures the graph fits properly
         st.pyplot(fig_la)
         plt.close()
 
