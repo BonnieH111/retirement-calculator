@@ -56,20 +56,17 @@ st.markdown("""
 </h1>
 """, unsafe_allow_html=True)
 
+# Centered Logo and Company Name
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
-    container = st.container()
-    cols = container.columns([2, 7])
-    with cols[0]:
-        st.image(logo, width=65)
-    with cols[1]:
-        st.markdown("""
-        <div class="company-name" style='height: 70px; display: flex; align-items: center;'>
-            <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
-                BHJCF Studio
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.image(logo, width=100)
+    st.markdown("""
+    <div style='text-align: center;'>
+        <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+            BHJCF Studio
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
@@ -230,9 +227,9 @@ with tab2:
         st.subheader("Projection Results")
         st.markdown(f"""
         <div style='margin: 20px 0;'>
-            <span class="custom-r">R</span> 
-            <span style='font-size: 18px;'>Monthly income: </span>
-            <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
+        <span class="custom-r">R</span> 
+        <span style='font-size: 18px;'>Monthly income: </span>
+        <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
         </div>
         """, unsafe_allow_html=True)
 
