@@ -245,15 +245,16 @@ with tab2:
         """, unsafe_allow_html=True)
 
         # Visualization
-        fig_la, ax_la = plt.subplots(ffig_la, ax_la = plt.subplots(figsize=(10,6))
-        ax_la.plot(depletion_years, balances, color='#228B22', linewidth=2)
-        ax_la.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
-        ax_la.set_title("Investment Balance Timeline", color='#00BFFF')
-        ax_la.set_xlabel("Age", color='#228B22')
-        ax_la.set_ylabel("Remaining Balance (R)", color='#FF5E00')
-        plt.tight_layout()  # Ensures the graph fits properly
-        st.pyplot(fig_la)
-        plt.close()
+fig_la, ax_la = plt.subplots(figsize=(10,6))
+ax_la.plot(depletion_years, balances, color='#228B22', linewidth=2)
+ax_la.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+ax_la.set_title("Investment Balance Timeline", color='#00BFFF')
+ax_la.set_xlabel("Age", color='#228B22')
+ax_la.set_ylabel("Remaining Balance (R)", color='#FF5E00')
+plt.tight_layout()  # Ensures the graph fits properly
+st.pyplot(fig_la)
+plt.close()
+
 
         # PDF Generation
         if st.button("📄 Generate Living Annuity PDF Report"):
