@@ -253,15 +253,25 @@ with tab2:
         ax_la.set_title("Investment Balance Timeline", color='#00BFFF')
         ax_la.set_xlabel("Age", color='#228B22')
         ax_la.set_ylabel("Remaining Balance (R)", color='#FF5E00')
-        plt.tight_layout()  # Ensures the graph fits properly
+        plt.tight_layout()
         st.pyplot(fig_la)
         plt.close()
 
-        # PDF Generation
+    # ============== NEW PDF SECTION STARTS HERE ==============
+    if 'balances' in locals():  # Only show if calculations exist
         if st.button("📄 Generate Living Annuity PDF Report"):
             try:
+                # Create new figure for PDF
+                fig_pdf, ax_pdf = plt.subplots(figsize=(10,6))
+                ax_pdf.plot(depletion_years, balances, color='#228B22', linewidth=2)
+                ax_pdf.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+                ax_pdf.set_title("Investment Balance Timeline", color='#00BFFF')
+                ax_pdf.set_xlabel("Age", color='#228B22')
+                ax_pdf.set_ylabel("Remaining Balance (R)", color='#FF5E00')
+                plt.tight_layout()
+                
                 with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
-                    fig_la.savefig(tmp_graph.name, dpi=300)
+                    fig_pdf.savefig(tmp_graph.name, dpi=300)
                     
                     pdf = FPDF()
                     pdf.add_page()
@@ -319,5 +329,6 @@ with tab2:
                                 file_name="Juanita_Living_Annuity_Report.pdf",
                                 mime="application/pdf"
                             )
+                plt.close(fig_pdf)
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
