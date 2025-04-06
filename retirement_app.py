@@ -142,9 +142,10 @@ with tab1:
                 pdf.cell(0, 15, "Retirement Cash Flow Report", ln=1, align='C')
                 pdf.ln(10)
                 
-                # Client Info
-                pdf.set_font("Arial", 'B', 12)pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
-                pdf.ln(5)
+                pdf.set_font("Arial", 'B', 12)
+pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)  # Corrected line
+pdf.ln(5)
+
                 
                 # Data Table
                 pdf.set_font("Arial", size=12)
