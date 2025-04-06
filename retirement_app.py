@@ -143,8 +143,7 @@ with tab1:
                 pdf.ln(10)
                 
                 # Client Info
-                pdf.set_font("Arial", 'B', 12)
-                pdf.c cell(0, 10, "Client: Juanita Moolman", ln=1)
+                pdf.set_font("Arial", 'B', 12)pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
                 pdf.ln(5)
                 
                 # Data Table
