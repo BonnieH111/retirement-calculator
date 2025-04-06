@@ -1,8 +1,10 @@
+# retirement_app.py
 import streamlit as st
 from numpy_financial import fv, pmt
 import matplotlib.pyplot as plt
 from PIL import Image
 from fpdf import FPDF
+import os
 
 # ======================
 # APP CONFIGURATION
@@ -31,8 +33,17 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 # ======================
-# BRANDING (OPTIMIZED SPACING)
+# BRANDING (FIXED)
 # ======================
+def load_logo():
+    try:
+        return Image.open("bhjcf-logo.png")
+    except Exception as e:
+        st.error(f"⚠️ Logo loading failed: {str(e)}")
+        st.stop()
+
+logo = load_logo()
+
 st.markdown("""
 <h1 style='text-align: center; margin-bottom: 20px;'>
     <span class="custom-r">R</span>
@@ -40,17 +51,12 @@ st.markdown("""
 </h1>
 """, unsafe_allow_html=True)
 
-# Logo and company name - tighter spacing
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
     container = st.container()
-    cols = container.columns([2, 7])  # Adjusted column ratio
+    cols = container.columns([2, 7])
     with cols[0]:
-        try:
-            logo = Image.open("bhjcf-logo.png")
-            st.image(logo, width=65)  # Slightly smaller logo
-        except:
-            st.warning("⚠️ Logo missing!")
+        st.image(logo, width=65)
     with cols[1]:
         st.markdown("""
         <div class="company-name" style='height: 70px; display: flex; align-items: center;'>
@@ -68,9 +74,6 @@ st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Clien
 tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
 with tab1:
-    # ======================
-    # RETIREMENT CALCULATOR 
-    # ======================
     current_age = st.slider("Current Age", 25, 100, 45)
     retirement_age = st.slider("Retirement Age", 50, 100, 65)
     retirement_savings = st.number_input("Current Savings (R)", value=500000)
@@ -78,7 +81,6 @@ with tab1:
     life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
     withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
 
-    # Calculations
     years_to_retirement = retirement_age - current_age
     future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
     years_in_retirement = life_expectancy - retirement_age
@@ -87,9 +89,9 @@ with tab1:
         st.error("❌ Life expectancy must be GREATER than retirement age!")
         st.stop()
 
-    withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year for year in range(years_in_retirement)]
+    withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year 
+                  for year in range(years_in_retirement)]
 
-    # Results 
     st.subheader("Your Spending Plan")
     st.markdown(f"""
     <div style='margin: 20px 0;'>
@@ -105,7 +107,6 @@ with tab1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Plot
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
     ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
@@ -113,29 +114,45 @@ with tab1:
     ax.set_xlabel("Age", color='#228B22')
     ax.set_ylabel("Annual Income (R)", color='#FF5E00')
     st.pyplot(fig)
+    plt.close()  # Fixes graph display issues
 
-    # PDF export button
-    if st.button("Export PDF Report"):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
+    if st.button("📄 Generate PDF Report"):
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            
+            # Logo handling
+            if os.path.exists("bhjcf-logo.png"):
+                pdf.image("bhjcf-logo.png", x=10, y=8, w=30)
+            
+            # Report content
+            pdf.cell(200, 10, txt="Retirement Cash Flow Report", ln=True, align="C")
+            pdf.ln(15)
+            pdf.cell(0, 10, txt=f"Client: Juanita Moolman", ln=True)
+            pdf.cell(0, 10, txt=f"Current Age: {current_age}", ln=True)
+            pdf.cell(0, 10, txt=f"Retirement Age: {retirement_age}", ln=True)
+            pdf.cell(0, 10, txt=f"Current Savings: R{retirement_savings:,.2f}", ln=True)
+            pdf.cell(0, 10, txt=f"Annual Return: {annual_return*100:.1f}%", ln=True)
+            pdf.cell(0, 10, txt=f"Life Expectancy: {life_expectancy}", ln=True)
+            pdf.cell(0, 10, txt=f"Withdrawal Rate: {withdrawal_rate*100:.1f}%", ln=True)
+            pdf.ln(10)
+            pdf.cell(0, 10, txt=f"Projected Retirement Value: R{future_value:,.2f}", ln=True)
+            pdf.cell(0, 10, txt=f"First Year Withdrawal: R{withdrawals[0]:,.2f}", ln=True)
+            
+            pdf.output("retirement_report.pdf")
+            with open("retirement_report.pdf", "rb") as f:
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=f.read(),
+                    file_name="Juanita_Retirement_Report.pdf",
+                    mime="application/pdf"
+                )
+        except Exception as e:
+            st.error(f"❌ PDF generation failed: {str(e)}")
 
-        pdf.image("bhjcf-logo.png", x=10, y=8, w=30)
-        pdf.ln(20)
-        pdf.cell(200, 10, txt="Retirement Cash Flow Report for Juanita Moolman", ln=True, align="C")
-        pdf.ln(10)
-        pdf.cell(100, 10, txt=f"Client: Juanita Moolman", ln=True)
-        pdf.cell(100, 10, txt=f"Current Age: {current_age}", ln=True)
-        pdf.cell(100, 10, txt=f"Retirement Age: {retirement_age}", ln=True)
-        pdf.cell(100, 10, txt=f"Current Savings: R{retirement_savings:,.2f}", ln=True)
-        pdf.cell(100, 10, txt=f"Annual Return: {annual_return * 100}%", ln=True)
-        pdf.cell(100, 10, txt=f"Life Expectancy: {life_expectancy}", ln=True)
-        pdf.cell(100, 10, txt=f"Withdrawal Rate: {withdrawal_rate * 100}%", ln=True)
-        pdf.cell(100, 10, txt=f"Future Value at Retirement: R{future_value:,.2f}", ln=True)
-        pdf.cell(100, 10, txt=f"Annual Withdrawal: R{withdrawals[0]:,.2f}", ln=True)
-        
-        pdf.output("Retirement_Cash_Flow_Report.pdf")
-        st.download_button("Download PDF", data=open("Retirement_Cash_Flow_Report.pdf", "rb").read(), file_name="Retirement_Cash_Flow_Report.pdf", mime="application/pdf")
+# Living Annuity tab remains unchanged from your working version...
+
 
 with tab2:
     # ======================
