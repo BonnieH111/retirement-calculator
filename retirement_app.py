@@ -270,85 +270,88 @@ with tab2:
             'la_retirement_age': la_retirement_age
         }
 
-    # PDF Generation (FIXED INDENTATION)
-    if st.button("📄 Generate Living Annuity PDF Report"):
-        if 'la_data' in st.session_state:
-            try:
-                data = st.session_state.la_data
+    # PDF Generation (Landscape A4 Centered)
+if st.button("📄 Generate Living Annuity PDF Report"):
+    if 'la_data' in st.session_state:
+        try:
+            data = st.session_state.la_data
+            
+            # Create new figure for PDF
+            fig_pdf, ax_pdf = plt.subplots(figsize=(10,6))
+            ax_pdf.plot(data['depletion_years'], data['balances'], 
+                       color='#228B22', linewidth=2)
+            ax_pdf.fill_between(data['depletion_years'], data['balances'], 
+                              color='#7FFF00', alpha=0.3)
+            ax_pdf.set_title("Investment Balance Timeline", color='#00BFFF')
+            ax_pdf.set_xlabel("Age", color='#228B22')
+            ax_pdf.set_ylabel("Remaining Balance (R)", color='#FF5E00')
+            plt.tight_layout()
+            
+            with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
+                fig_pdf.savefig(tmp_graph.name, dpi=300)
                 
-                # Create new figure for PDF
-                fig_pdf, ax_pdf = plt.subplots(figsize=(10,6))
-                ax_pdf.plot(data['depletion_years'], data['balances'], 
-                          color='#228B22', linewidth=2)
-                ax_pdf.fill_between(data['depletion_years'], data['balances'], 
-                                  color='#7FFF00', alpha=0.3)
-                ax_pdf.set_title("Investment Balance Timeline", color='#00BFFF')
-                ax_pdf.set_xlabel("Age", color='#228B22')
-                ax_pdf.set_ylabel("Remaining Balance (R)", color='#FF5E00')
-                plt.tight_layout()
+                pdf = FPDF(orientation='L')  # LANDSCAPE MODE
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 16)
                 
-                with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
-                    fig_pdf.savefig(tmp_graph.name, dpi=300)
+                # Centered Logo & Company Name (adjusted for landscape)
+                page_width = pdf.w  # Get landscape page width (297mm)
+                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=10, w=30)  # Horizontally centered
+                pdf.set_y(40)
+                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
+                
+                # Report Title
+                pdf.set_font("Arial", 'B', 20)
+                pdf.cell(0, 15, "Living Annuity Report", ln=1, align='C')
+                pdf.ln(15)  # Increased spacing
+                
+                # Client Info
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1, align='C')  # Centered
+                pdf.ln(10)
+                
+                # Data Table (centered using page width)
+                pdf.set_font("Arial", size=12)
+                col_width = page_width/2.5  # Adjusted column width for landscape
+                data_table = [
+                    ("Current Age", data['la_current_age']),
+                    ("Retirement Age", data['la_retirement_age']),
+                    ("Total Investment", f"R{data['investment']:,.2f}"),
+                    ("Annual Return", f"{data['la_return']*100:.1f}%"),
+                    ("Withdrawal Rate", f"{data['withdrawal_rate']*100:.1f}%"),
+                    ("Monthly Income", f"R{data['monthly_income']:,.2f}"),
+                    ("Projection Outlook", data['longevity_text'])
+                ]
+                
+                # Center table content
+                for label, value in data_table:
+                    pdf.cell(col_width, 10, label, border=0, align='R')
+                    pdf.cell(col_width, 10, str(value), ln=1, align='L')
+                
+                # Centered graph (calculate position based on page width)
+                img_width = 190  # Reduced width for better margins
+                pdf.image(tmp_graph.name, x=(page_width - img_width)/2, y=120, w=img_width)
+                
+                # Save PDF
+                with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
+                    pdf.output(tmp_pdf.name)
                     
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", 'B', 16)
-                    
-                    # Centered Logo & Company Name
-                    pdf.image("bhjcf-logo.png", x=(210-30)/2, y=10, w=30)
-                    pdf.set_y(40)
-                    pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
-                    
-                    # Report Title
-                    pdf.set_font("Arial", 'B', 20)
-                    pdf.cell(0, 15, "Living Annuity Report", ln=1, align='C')
-                    pdf.ln(10)
-                    
-                    # Client Info
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
-                    pdf.ln(5)
-                    
-                    # Data Table
-                    pdf.set_font("Arial", size=12)
-                    data_table = [
-                        ("Current Age", data['la_current_age']),
-                        ("Retirement Age", data['la_retirement_age']),
-                        ("Total Investment", f"R{data['investment']:,.2f}"),
-                        ("Annual Return", f"{data['la_return']*100:.1f}%"),
-                        ("Withdrawal Rate", f"{data['withdrawal_rate']*100:.1f}%"),
-                        ("Monthly Income", f"R{data['monthly_income']:,.2f}"),
-                        ("Projection Outlook", data['longevity_text'])
-                    ]
-                    
-                    for label, value in data_table:
-                        pdf.cell(90, 10, label, border=0)
-                        pdf.cell(0, 10, str(value), ln=1)
-                    
-                    # Add graph
-                    pdf.image(tmp_graph.name, x=10, y=140, w=190)
-                    
-                    # Save PDF
-                    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
-                        pdf.output(tmp_pdf.name)
+                    # Preview
+                    with open(tmp_pdf.name, "rb") as f:
+                        encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
+                        pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="600px"></iframe>'
+                        st.markdown(pdf_preview, unsafe_allow_html=True)
                         
-                        # Preview
-                        with open(tmp_pdf.name, "rb") as f:
-                            encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                            pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="600px"></iframe>'
-                            st.markdown(pdf_preview, unsafe_allow_html=True)
-                            
-                        # Download
-                        with open(tmp_pdf.name, "rb") as f:
-                            st.download_button(
-                                label="⬇️ Download PDF",
-                                data=f.read(),
-                                file_name="Juanita_Living_Annuity_Report.pdf",
-                                mime="application/pdf"
-                            )
-                plt.close(fig_pdf)
-            except Exception as e:
-                st.error(f"❌ PDF generation failed: {str(e)}")
-        else:
-            st.warning("⚠️ Please calculate projections first!")
-
+                    # Download
+                    with open(tmp_pdf.name, "rb") as f:
+                        st.download_button(
+                            label="⬇️ Download PDF",
+                            data=f.read(),
+                            file_name="Juanita_Living_Annuity_Report.pdf",
+                            mime="application/pdf"
+                        )
+            plt.close(fig_pdf)
+        except Exception as e:
+            st.error(f"❌ PDF generation failed: {str(e)}")
+    else:
+        st.warning("⚠️ Please calculate projections first!")
