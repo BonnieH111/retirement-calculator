@@ -144,6 +144,11 @@ with tab1:
             pdf.ln(10)
             pdf.cell(0, 10, txt=f"Projected Retirement Value: R{future_value:,.2f}", ln=True)
             pdf.cell(0, 10, txt=f"First Year Withdrawal: R{withdrawals[0]:,.2f}", ln=True)
+
+            # Add the graph to the PDF
+            plt.savefig("retirement_projection.png", dpi=300)
+            pdf.ln(10)
+            pdf.image("retirement_projection.png", x=10, y=100, w=190)
             
             pdf.output("retirement_report.pdf")
             with open("retirement_report.pdf", "rb") as f:
