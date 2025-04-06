@@ -124,33 +124,36 @@ with tab1:
     st.pyplot(fig)
     plt.close()
 
-    # Generate PDF with preview
+        # Generate PDF with preview (UPDATED)
     if st.button("📄 Generate PDF Report"):
         try:
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig.savefig(tmp_graph.name, dpi=300)
                 
-                pdf = FPDF()
+                # PDF Setup with Centering
+                pdf = FPDF(orientation='P')  # Explicit portrait mode
                 pdf.add_page()
                 pdf.set_font("Arial", 'B', 16)
+                page_width = pdf.w  # Get portrait width (210mm)
                 
-                # Centered Logo & Company Name
-                pdf.image("bhjcf-logo.png", x=(210-30)/2, y=10, w=30)
+                # Centered Logo & Name
+                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=10, w=30)
                 pdf.set_y(40)
                 pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
 
-                # Report Title
+                # Title
                 pdf.set_font("Arial", 'B', 20)
                 pdf.cell(0, 15, "Retirement Cash Flow Report", ln=1, align='C')
+                pdf.ln(15)
+
+                # Client Info Centered
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1, align='C')
                 pdf.ln(10)
 
-                # Client Info
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1)
-                pdf.ln(5)
-
-                # Data Table
+                # Data Table with Alignment
                 pdf.set_font("Arial", size=12)
+                col_width = page_width/2.8  # Portrait column width
                 data = [
                     ("Current Age", current_age),
                     ("Retirement Age", retirement_age),
@@ -162,12 +165,14 @@ with tab1:
                     ("First Year Withdrawal", f"R{withdrawals[0]:,.2f}")
                 ]
                 
+                # Aligned Columns
                 for label, value in data:
-                    pdf.cell(90, 10, label, border=0)
-                    pdf.cell(0, 10, str(value), ln=1)
+                    pdf.cell(col_width, 10, label, border=0, align='R')
+                    pdf.cell(col_width, 10, str(value), ln=1, align='L')
                 
-                # Add graph
-                pdf.image(tmp_graph.name, x=10, y=140, w=190)
+                # Centered Graph
+                img_width = 180  # Adjusted for portrait
+                pdf.image(tmp_graph.name, x=(page_width - img_width)/2, y=140, w=img_width)
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
