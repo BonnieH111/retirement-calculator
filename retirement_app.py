@@ -124,52 +124,50 @@ with tab1:
     st.pyplot(fig)
     plt.close()
 
-        # Generate PDF with preview (UPDATED)
+        # Generate PDF with preview (FINAL CENTERED VERSION)
     if st.button("📄 Generate PDF Report"):
         try:
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig.savefig(tmp_graph.name, dpi=300)
                 
-                # PDF Setup with Full Centering
+                # PDF Setup with Hybrid Layout
                 pdf = FPDF(orientation='P', format='A4')
                 pdf.add_page()
-                pdf.set_auto_page_break(auto=False)
                 pdf.set_font("Arial", 'B', 16)
                 page_width = pdf.w
-                left_margin = 20  # Unified left margin
+                left_margin = 25  # Unified margin for alignment
 
-                # --- Header Section ---
-                pdf.image("bhjcf-logo.png", x=left_margin, y=10, w=30)  # Left-aligned logo
-                pdf.set_xy(left_margin, 40)  # 30mm below logo
-                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='L')
+                # --- Centered Header Section ---
+                # Logo and Name on same line
+                logo_width = 30
+                text_width = pdf.get_string_width("BHJCF Studio")
+                total_width = logo_width + text_width + 5  # 5mm spacing
                 
-                # --- Title Section ---
+                # Calculate starting X position
+                x_start = (page_width - total_width) / 2
+                pdf.image("bhjcf-logo.png", x=x_start, y=15, w=logo_width)
+                pdf.set_xy(x_start + logo_width + 5, 15)
+                pdf.cell(0, 10, "BHJCF Studio", align='L')
+                
+                # --- Centered Title Section ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(60)
-                pdf.cell(0, 15, "Retirement Cash Flow Report", align='L')
+                pdf.set_y(40)
+                pdf.cell(0, 15, "Retirement Cash Flow Report", align='C')
                 
                 # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(80)
-                pdf.cell(0, 10, "Client: Juanita Moolman", align='L')
+                pdf.set_y(60)
+                pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
 
                 # --- Data Table ---
                 pdf.set_font("Arial", size=12)
-                pdf.set_y(95)
+                pdf.set_y(75)
                 col_width = 80
-                
                 data = [
-                    ("Current Age:", current_age),
-                    ("Retirement Age:", retirement_age),
-                    ("Current Savings:", f"R{retirement_savings:,.2f}"),
-                    ("Annual Return:", f"{annual_return*100:.1f}%"),
-                    ("Life Expectancy:", life_expectancy),
-                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
-                    ("Projected Value:", f"R{future_value:,.2f}"),
-                    ("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
+                    # ... keep existing data items ...
                 ]
                 
-                # Aligned to left margin
+                # Aligned to unified left margin
                 for label, value in data:
                     pdf.set_x(left_margin)
                     pdf.cell(col_width, 10, label, border=0, align='L')
@@ -177,9 +175,9 @@ with tab1:
                     pdf.ln(10)
 
                 # --- Graph Alignment ---
-                img_width = 170  # Reduced width
+                img_width = page_width - (left_margin * 2)  # Full width with margins
                 pdf.image(tmp_graph.name, 
-                         x=left_margin,  # Align with left margin
+                         x=left_margin,
                          y=pdf.get_y() + 10, 
                          w=img_width)
                 
@@ -190,8 +188,8 @@ with tab1:
                     # Preview
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                    pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
-                    st.markdown(pdf_preview, unsafe_allow_html=True)
+                        pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="1000px" style="border:none;"></iframe>'
+                        st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
                     with open(tmp_pdf.name, "rb") as f:
@@ -350,11 +348,13 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                     pdf.ln(10)
 
                 # --- Graph Positioning ---
-                img_width = 240  # Wider for landscape
+                img_width = page_width - (left_margin * 2)  # Account for margins
+                img_height = 100  # Fixed height for visibility
                 pdf.image(tmp_graph.name, 
-                         x=left_margin,  # Align with left margin
-                         y=pdf.get_y() + 10, 
-                         w=img_width)
+                         x=left_margin,
+                         y=pdf.get_y() + 15,  # Extra spacing
+                         w=img_width,
+                         h=img_height)  # Constrained height
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
@@ -363,8 +363,8 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                     # Preview
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                    pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
-                    st.markdown(pdf_preview, unsafe_allow_html=True)
+                        pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="1000px" style="border:none;"></iframe>'
+                        st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
                     with open(tmp_pdf.name, "rb") as f:
