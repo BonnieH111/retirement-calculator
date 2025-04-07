@@ -191,7 +191,7 @@ with tab1:
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
                     pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
-                        st.markdown(pdf_preview, unsafe_allow_html=True)
+                    st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
                     with open(tmp_pdf.name, "rb") as f:
@@ -363,8 +363,8 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                     # Preview
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                      pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
-                        st.markdown(pdf_preview, unsafe_allow_html=True)
+                    pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
+                    st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
                     with open(tmp_pdf.name, "rb") as f:
