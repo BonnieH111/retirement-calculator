@@ -124,66 +124,63 @@ with tab1:
     st.pyplot(fig)
     plt.close()
 
-        # Generate PDF with preview (FINAL CENTERED VERSION)
+        # Generate PDF with preview (UPDATED)
     if st.button("📄 Generate PDF Report"):
         try:
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig.savefig(tmp_graph.name, dpi=300)
                 
                 # PDF Setup with Full Centering
-                pdf = FPDF(orientation='P', format='A4')  # Explicit A4 portrait
+                pdf = FPDF(orientation='P', format='A4')
                 pdf.add_page()
-                pdf.set_auto_page_break(auto=False)  # Manual positioning
+                pdf.set_auto_page_break(auto=False)
                 pdf.set_font("Arial", 'B', 16)
-                page_width = pdf.w  # 210mm for A4 portrait
+                page_width = pdf.w
+                left_margin = 20  # Unified left margin
 
-                # --- Centered Header Section ---
-                # Logo centered with 15mm top margin
-                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=15, w=30)
-                # Company name centered below logo
-                pdf.set_xy(0, 45)
-                pdf.cell(page_width, 10, "BHJCF Studio", align='C')
+                # --- Header Section ---
+                pdf.image("bhjcf-logo.png", x=left_margin, y=10, w=30)  # Left-aligned logo
+                pdf.set_xy(left_margin, 40)  # 30mm below logo
+                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='L')
                 
-                # --- Centered Title Section ---
+                # --- Title Section ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(60)  # 15mm below company name
-                pdf.cell(page_width, 15, "Retirement Cash Flow Report", align='C')
+                pdf.set_y(60)
+                pdf.cell(0, 15, "Retirement Cash Flow Report", align='L')
                 
-                # --- Centered Client Info ---
+                # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(80)  # 20mm below title
-                pdf.cell(page_width, 10, "Client: Juanita Moolman", align='C')
+                pdf.set_y(80)
+                pdf.cell(0, 10, "Client: Juanita Moolman", align='L')
 
-                # --- Centered Data Table ---
+                # --- Data Table ---
                 pdf.set_font("Arial", size=12)
-                pdf.set_y(95)  # 15mm below client info
-                col_width = 80  # Fixed width for alignment
+                pdf.set_y(95)
+                col_width = 80
                 
                 data = [
-                    ("Current Age", current_age),
-                    ("Retirement Age", retirement_age),
-                    ("Current Savings", f"R{retirement_savings:,.2f}"),
-                    ("Annual Return", f"{annual_return*100:.1f}%"),
-                    ("Life Expectancy", life_expectancy),
-                    ("Withdrawal Rate", f"{withdrawal_rate*100:.1f}%"),
-                    ("Projected Value", f"R{future_value:,.2f}"),
-                    ("First Year Withdrawal", f"R{withdrawals[0]:,.2f}")
+                    ("Current Age:", current_age),
+                    ("Retirement Age:", retirement_age),
+                    ("Current Savings:", f"R{retirement_savings:,.2f}"),
+                    ("Annual Return:", f"{annual_return*100:.1f}%"),
+                    ("Life Expectancy:", life_expectancy),
+                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
+                    ("Projected Value:", f"R{future_value:,.2f}"),
+                    ("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
                 ]
                 
-                # Center table on page
-                table_start_x = (page_width - (col_width * 2)) / 2
+                # Aligned to left margin
                 for label, value in data:
-                    pdf.set_x(table_start_x)
-                    pdf.cell(col_width, 10, label, border=0, align='R')
+                    pdf.set_x(left_margin)
+                    pdf.cell(col_width, 10, label, border=0, align='L')
                     pdf.cell(col_width, 10, str(value), align='L')
                     pdf.ln(10)
 
-                # --- Centered Graph ---
-                img_width = 180  # 180mm width for 10mm side margins
-                y_position = pdf.get_y() + 10  # 10mm below table
+                # --- Graph Alignment ---
+                img_width = 170  # Reduced width
                 pdf.image(tmp_graph.name, 
-                         x=(page_width - img_width)/2,  # Center horizontally
-                         y=y_position, 
+                         x=left_margin,  # Align with left margin
+                         y=pdf.get_y() + 10, 
                          w=img_width)
                 
                 # Save PDF
@@ -193,7 +190,7 @@ with tab1:
                     # Preview
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                        pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="600px"></iframe>'
+                    pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
                         st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
@@ -293,8 +290,8 @@ if st.button("📄 Generate Living Annuity PDF Report"):
         try:
             data = st.session_state.la_data
             
-            # Create new figure for PDF
-            fig_pdf, ax_pdf = plt.subplots(figsize=(10,6))
+            # Create new figure for PDF with adjusted size
+            fig_pdf, ax_pdf = plt.subplots(figsize=(12,5))  # Shorter height
             ax_pdf.plot(data['depletion_years'], data['balances'], 
                        color='#228B22', linewidth=2)
             ax_pdf.fill_between(data['depletion_years'], data['balances'], 
@@ -307,47 +304,57 @@ if st.button("📄 Generate Living Annuity PDF Report"):
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig_pdf.savefig(tmp_graph.name, dpi=300)
                 
-                pdf = FPDF(orientation='L')  # LANDSCAPE MODE
+                pdf = FPDF(orientation='L')
                 pdf.add_page()
                 pdf.set_font("Arial", 'B', 16)
+                page_width = pdf.w
+                left_margin = 20  # Unified left margin
+
+                # --- Header Section ---
+                pdf.image("bhjcf-logo.png", x=left_margin, y=15, w=30)
+                pdf.set_xy(left_margin, 40)
+                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='L')
                 
-                # Centered Logo & Company Name (adjusted for landscape)
-                page_width = pdf.w  # Get landscape page width (297mm)
-                pdf.image("bhjcf-logo.png", x=(page_width-30)/2, y=10, w=30)  # Horizontally centered
-                pdf.set_y(40)
-                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='C')
-                
-                # Report Title
+                # --- Title Section ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.cell(0, 15, "Living Annuity Report", ln=1, align='C')
-                pdf.ln(15)  # Increased spacing
+                pdf.set_y(60)
+                pdf.cell(0, 15, "Living Annuity Report", align='L')
                 
-                # Client Info
+                # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Client: Juanita Moolman", ln=1, align='C')  # Centered
-                pdf.ln(10)
-                
-                # Data Table (centered using page width)
+                pdf.set_y(80)
+                pdf.cell(0, 10, "Client: Juanita Moolman", align='L')
+
+                # --- Expanded Data Table ---
                 pdf.set_font("Arial", size=12)
-                col_width = page_width/2.5  # Adjusted column width for landscape
+                pdf.set_y(95)
+                col_width = 80
+                
                 data_table = [
-                    ("Current Age", data['la_current_age']),
-                    ("Retirement Age", data['la_retirement_age']),
-                    ("Total Investment", f"R{data['investment']:,.2f}"),
-                    ("Annual Return", f"{data['la_return']*100:.1f}%"),
-                    ("Withdrawal Rate", f"{data['withdrawal_rate']*100:.1f}%"),
-                    ("Monthly Income", f"R{data['monthly_income']:,.2f}"),
-                    ("Projection Outlook", data['longevity_text'])
+                    ("Current Age:", data['la_current_age']),
+                    ("Retirement Age:", data['la_retirement_age']),
+                    ("Total Investment:", f"R{data['investment']:,.2f}"),
+                    ("Annual Return:", f"{data['la_return']*100:.1f}%"),
+                    ("Withdrawal Rate:", f"{data['withdrawal_rate']*100:.1f}%"),
+                    ("Monthly Income:", f"R{data['monthly_income']:,.2f}"),
+                    ("Projection Years:", f"{len(data['balances'])} years"),
+                    ("Final Balance:", f"R{data['balances'][-1]:,.2f}" if data['balances'][-1] > 0 else "Depleted"),
+                    ("Outlook:", data['longevity_text'])
                 ]
                 
-                # Center table content
+                # Aligned to left margin
                 for label, value in data_table:
-                    pdf.cell(col_width, 10, label, border=0, align='R')
-                    pdf.cell(col_width, 10, str(value), ln=1, align='L')
-                
-                # Centered graph (calculate position based on page width)
-                img_width = 190  # Reduced width for better margins
-                pdf.image(tmp_graph.name, x=(page_width - img_width)/2, y=120, w=img_width)
+                    pdf.set_x(left_margin)
+                    pdf.cell(col_width, 10, label, border=0, align='L')
+                    pdf.cell(col_width, 10, str(value), align='L')
+                    pdf.ln(10)
+
+                # --- Graph Positioning ---
+                img_width = 240  # Wider for landscape
+                pdf.image(tmp_graph.name, 
+                         x=left_margin,  # Align with left margin
+                         y=pdf.get_y() + 10, 
+                         w=img_width)
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
@@ -356,7 +363,7 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                     # Preview
                     with open(tmp_pdf.name, "rb") as f:
                         encoded_pdf = base64.b64encode(f.read()).decode("utf-8")
-                        pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="600px"></iframe>'
+                      pdf_preview = f'<iframe src="data:application/pdf;base64,{encoded_pdf}" width="100%" height="800px" style="border:none;"></iframe>'
                         st.markdown(pdf_preview, unsafe_allow_html=True)
                         
                     # Download
