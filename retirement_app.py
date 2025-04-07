@@ -124,62 +124,71 @@ with tab1:
     st.pyplot(fig)
     plt.close()
 
-        # Generate PDF with preview (FINAL CENTERED VERSION)
+        # Generate PDF with preview (UPDATED)
     if st.button("📄 Generate PDF Report"):
         try:
             with NamedTemporaryFile(delete=False, suffix=".png") as tmp_graph:
                 fig.savefig(tmp_graph.name, dpi=300)
                 
-                # PDF Setup with Hybrid Layout
                 pdf = FPDF(orientation='P', format='A4')
                 pdf.add_page()
                 pdf.set_font("Arial", 'B', 16)
                 page_width = pdf.w
-                left_margin = 25  # Unified margin for alignment
+                left_margin = 25  # Unified left margin
 
-                # --- Centered Header Section ---
-                # Logo and Name on same line
-                logo_width = 30
-                text_width = pdf.get_string_width("BHJCF Studio")
-                total_width = logo_width + text_width + 5  # 5mm spacing
+                # --- Header with Logo & Name ---
+                logo_width = 25  # Reduced size
+                company_name = "BHJCF Studio"
                 
-                # Calculate starting X position
+                # Calculate centered position
+                text_width = pdf.get_string_width(company_name)
+                total_width = logo_width + text_width + 5  # 5mm gap
                 x_start = (page_width - total_width) / 2
-                pdf.image("bhjcf-logo.png", x=x_start, y=15, w=logo_width)
-                pdf.set_xy(x_start + logo_width + 5, 15)
-                pdf.cell(0, 10, "BHJCF Studio", align='L')
                 
-                # --- Centered Title Section ---
+                # Draw elements
+                pdf.image("bhjcf-logo.png", x=x_start, y=15, w=logo_width)
+                pdf.set_xy(x_start + logo_width + 5, 17)  # Vertically aligned
+                pdf.cell(0, 10, company_name)
+                
+                # --- Title ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(40)
+                pdf.set_y(45)  # Below header
                 pdf.cell(0, 15, "Retirement Cash Flow Report", align='C')
                 
                 # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(60)
+                pdf.set_y(65)
                 pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
 
                 # --- Data Table ---
                 pdf.set_font("Arial", size=12)
-                pdf.set_y(75)
+                pdf.set_y(80)  # Below client info
                 col_width = 80
                 data = [
-                    # ... keep existing data items ...
+                    ("Current Age:", current_age),
+                    ("Retirement Age:", retirement_age),
+                    ("Current Savings:", f"R{retirement_savings:,.2f}"),
+                    ("Annual Return:", f"{annual_return*100:.1f}%"),
+                    ("Life Expectancy:", life_expectancy),
+                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
+                    ("Projected Value:", f"R{future_value:,.2f}"),
+                    ("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
                 ]
                 
-                # Aligned to unified left margin
+                # Centered table
+                table_width = col_width * 2
+                x_table = (page_width - table_width) / 2
                 for label, value in data:
-                    pdf.set_x(left_margin)
-                    pdf.cell(col_width, 10, label, border=0, align='L')
-                    pdf.cell(col_width, 10, str(value), align='L')
-                    pdf.ln(10)
+                    pdf.set_x(x_table)
+                    pdf.cell(col_width, 10, label, border=0)
+                    pdf.cell(col_width, 10, str(value), ln=1)
 
-                # --- Graph Alignment ---
-                img_width = page_width - (left_margin * 2)  # Full width with margins
+                # --- Graph ---
+                pdf.set_y(pdf.get_y() + 10)
                 pdf.image(tmp_graph.name, 
-                         x=left_margin,
-                         y=pdf.get_y() + 10, 
-                         w=img_width)
+                         x=left_margin, 
+                         y=pdf.get_y(),
+                         w=page_width - (left_margin * 2))
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
@@ -288,8 +297,8 @@ if st.button("📄 Generate Living Annuity PDF Report"):
         try:
             data = st.session_state.la_data
             
-            # Create new figure for PDF with adjusted size
-            fig_pdf, ax_pdf = plt.subplots(figsize=(12,5))  # Shorter height
+            # Create new figure for PDF
+            fig_pdf, ax_pdf = plt.subplots(figsize=(14, 5))  # Wider aspect ratio
             ax_pdf.plot(data['depletion_years'], data['balances'], 
                        color='#228B22', linewidth=2)
             ax_pdf.fill_between(data['depletion_years'], data['balances'], 
@@ -306,28 +315,33 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                 pdf.add_page()
                 pdf.set_font("Arial", 'B', 16)
                 page_width = pdf.w
-                left_margin = 20  # Unified left margin
+                left_margin = 25
 
-                # --- Header Section ---
-                pdf.image("bhjcf-logo.png", x=left_margin, y=15, w=30)
-                pdf.set_xy(left_margin, 40)
-                pdf.cell(0, 10, "BHJCF Studio", ln=1, align='L')
+                # --- Header with Logo & Name ---
+                logo_width = 25
+                company_name = "BHJCF Studio"
+                text_width = pdf.get_string_width(company_name)
+                total_width = logo_width + text_width + 5
+                x_start = (page_width - total_width) / 2
                 
-                # --- Title Section ---
+                pdf.image("bhjcf-logo.png", x=x_start, y=20, w=logo_width)
+                pdf.set_xy(x_start + logo_width + 5, 22)
+                pdf.cell(0, 10, company_name)
+
+                # --- Title ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(60)
-                pdf.cell(0, 15, "Living Annuity Report", align='L')
-                
+                pdf.set_y(50)
+                pdf.cell(0, 15, "Living Annuity Report", align='C')
+
                 # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(80)
-                pdf.cell(0, 10, "Client: Juanita Moolman", align='L')
+                pdf.set_y(70)
+                pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
 
-                # --- Expanded Data Table ---
+                # --- Data Table ---
                 pdf.set_font("Arial", size=12)
-                pdf.set_y(95)
-                col_width = 80
-                
+                pdf.set_y(85)
+                col_width = 90  # Wider columns
                 data_table = [
                     ("Current Age:", data['la_current_age']),
                     ("Retirement Age:", data['la_retirement_age']),
@@ -340,21 +354,21 @@ if st.button("📄 Generate Living Annuity PDF Report"):
                     ("Outlook:", data['longevity_text'])
                 ]
                 
-                # Aligned to left margin
+                # Centered table
+                table_width = col_width * 2
+                x_table = (page_width - table_width) / 2
                 for label, value in data_table:
-                    pdf.set_x(left_margin)
-                    pdf.cell(col_width, 10, label, border=0, align='L')
-                    pdf.cell(col_width, 10, str(value), align='L')
-                    pdf.ln(10)
+                    pdf.set_x(x_table)
+                    pdf.cell(col_width, 10, label, border=0)
+                    pdf.cell(col_width, 10, str(value), ln=1)
 
-                # --- Graph Positioning ---
-                img_width = page_width - (left_margin * 2)  # Account for margins
-                img_height = 100  # Fixed height for visibility
+                # --- Graph ---
+                pdf.set_y(pdf.get_y() + 15)
                 pdf.image(tmp_graph.name, 
-                         x=left_margin,
-                         y=pdf.get_y() + 15,  # Extra spacing
-                         w=img_width,
-                         h=img_height)  # Constrained height
+                         x=left_margin, 
+                         y=pdf.get_y(),
+                         w=page_width - (left_margin * 2),
+                         h=80)  # Fixed height
                 
                 # Save PDF
                 with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
