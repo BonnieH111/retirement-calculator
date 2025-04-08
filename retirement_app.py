@@ -365,7 +365,7 @@ with tab1:
                 st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
-# LIVING ANNUITY TAB - FIXED IMPLEMENTATION
+# LIVING ANNUITY TAB - FULLY CORRECTED
 # ======================
 with tab2:
     # Input columns with validation
@@ -384,8 +384,18 @@ with tab2:
 
     # Core parameters
     investment = st.number_input("Annuity Value (R)", value=5_000_000, min_value=100_000, step=50_000, key="la_invest")
-    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw 
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
 
     # Market assumptions
     with st.expander("⚙️ Market Parameters"):
         la_return = st.slider("Expected Annual Return (%)", -10.0, 20.0, 7.0)/100
+        inflation_rate = st.slider("Annual Inflation (%)", 0.0, 10.0, 4.5)/100
+        volatility = st.slider("Market Volatility (Std Dev)", 0.0, 0.3, 0.15)
+        monte_carlo_runs = st.selectbox("Simulation Runs", [100, 500, 1000], index=1)
+
+    # COMPLETE TAX FUNCTION (2024 SARS RATES)
+    def calculate_tax(withdrawal):
+        # 2024 Tax Brackets (Under 65)
+        brackets = [
+            (237100, 0.18),
+            (370 
