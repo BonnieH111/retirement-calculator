@@ -34,9 +34,10 @@ st.markdown("""<style>
 .logo-column { 
     padding-right: 0px !important;
     display: flex;
-    align-items: baseline !important;  /* Perfect vertical align */
+    align-items: center !important;  /* Perfect vertical align */
     padding-top: 2px;
-    margin-bottom: -4px;
+    margin-top: -28px;  /* Adjusted */
+    margin-bottom: -18px;  /* Adjusted */
 }
 .company-name { 
     margin-left: -25px !important;
@@ -78,8 +79,8 @@ with col2:
             logo_base64 = get_logo_as_base64(logo_path)
             st.markdown(f"""
             <div style='display: flex; justify-content: center; align-items: center;'>
-                <img src="data:image/png;base64,{logo_base64}" width="65" style='margin-right: 10px;'>
-                <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+                <img src="data:image/png;base64,{logo_base64}" width="65" style='margin-right: 10px; vertical-align: middle;'>
+                <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0; position: relative; top: 3px;'>
                     BHJCF Studio
                 </p>
             </div>
@@ -230,7 +231,7 @@ with tab1:
                 # Create PDF in portrait A4 format
                 pdf = FPDF(orientation='P', format='A4')
                 pdf.add_page()
-                pdf.set_auto_page_break(auto=True, margin=15)
+                pdf.set_auto_page_break(auto=True, margin=10)
                 pdf.set_font("Arial", 'B', 16)
                 page_width = pdf.w
                 left_margin = 15  # Unified left margin
@@ -248,14 +249,14 @@ with tab1:
                 
                 # Draw elements - only add logo if it exists
                 if os.path.exists(logo_path):
-                    pdf.image(logo_path, x=x_start, y=18, w=logo_width)
+                    pdf.image(logo_path, x=x_start, y=12, w=logo_width)  # Adjusted y position
                 
-                pdf.set_xy(x_start + logo_width + 5, 20)  # Vertically aligned
+                pdf.set_xy(x_start + logo_width + 5, 14)  # Adjusted y position
                 pdf.cell(0, 10, company_name)
                 
                 # --- Title with decorative underline ---
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(45)  # Below header
+                pdf.set_y(40)  # Adjusted y position
                 title = "Retirement Cash Flow Report"
                 pdf.cell(0, 10, title, align='C')
                 
@@ -263,16 +264,16 @@ with tab1:
                 title_width = pdf.get_string_width(title)
                 pdf.set_line_width(0.5)
                 pdf.set_draw_color(0, 191, 255)  # Light Blue
-                pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
+                pdf.line((page_width - title_width) / 2, 52, (page_width + title_width) / 2, 52)
                 
                 # --- Client Info ---
                 pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(65)
+                pdf.set_y(60)
                 safe_client_name = escape("Juanita Moolman")  # Prevent XSS
                 pdf.cell(0, 10, f"Client: {safe_client_name}", align='C')
 
                 # --- Data Table with alternating colors ---
-                pdf.set_y(80)  # Below client info
+                pdf.set_y(75)  # Below client info
                 data = [
                     ("Current Age:", f"{current_age} years"),
                     ("Retirement Age:", f"{retirement_age} years"),
@@ -287,7 +288,7 @@ with tab1:
                 
                 # Create a professional table with alternating row colors
                 col_width = 60  # Updated column width
-                row_height = 10
+                row_height = 8  # Reduced row height
                 
                 for i, (label, value) in enumerate(data):
                     # Set background color for alternating rows
@@ -308,12 +309,12 @@ with tab1:
                 
                 # Add a title for the graph section
                 pdf.set_font("Arial", 'B', 14)
-                pdf.set_y(graph_y)
+                pdf.set_y(graph_y - 5)  # Adjusted y position
                 pdf.cell(0, 10, "Retirement Income Projection", 0, 1, 'C')
                 graph_y = pdf.get_y() + 5
                 
                 # Insert the graph image
-                graph_width = usable_width  # Full width within margins
+                graph_width = usable_width * 0.9  # Reduced size
                 img = Image.open(img_buf)
                 aspect_ratio = img.height / img.width
                 pdf.image(img_buf, 
@@ -329,19 +330,19 @@ with tab1:
                 pdf.multi_cell(0, 5, "This projection shows your expected annual income during retirement, adjusted for the specified annual return rate. The green shaded area represents your potential withdrawal amounts over time.", 0, 'L')
                 
                 # Add a disclaimer
-                remaining_space = pdf.h - pdf.get_y() - 40  # 40mm buffer
+                remaining_space = pdf.h - pdf.get_y() - 25  # Reduced buffer
                 if remaining_space < 20:
                     pdf.add_page()
                 pdf.set_y(pdf.get_y() + 10)  # Ensure breathing room
-                pdf.set_font("Arial", 'I', 8)
+                pdf.set_font("Arial", 'I', 7)  # Reduced font size
                 pdf.set_text_color(150, 150, 150)  # Light gray
-                pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
+                pdf.multi_cell(0, 3, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'J')
                 
-                # Footer with page number and date
-                pdf.set_y(-20)
-                pdf.set_font("Arial", 'I', 8)
-                pdf.set_text_color(0, 0, 0)  # Black
-                pdf.cell(0, 10, f"BHJCF Studio Retirement Calculator | Page {pdf.page_no()}", 0, 0, 'C')
+                # Remove footer with page number and date
+                # pdf.set_y(-20)
+                # pdf.set_font("Arial", 'I', 8)
+                # pdf.set_text_color(0, 0, 0)  # Black
+                # pdf.cell(0, 10, f"BHJCF Studio Retirement Calculator | Page {pdf.page_no()}", 0, 0, 'C')
                 
                 # Save PDF to memory
                 pdf_output = io.BytesIO()
@@ -364,7 +365,7 @@ with tab1:
                 st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
-# LIVING ANNUITY TAB - FINAL CORRECTED TAX FUNCTION
+# LIVING ANNUITY TAB - FULLY CORRECTED
 # ======================
 with tab2:
     # Input columns with validation
@@ -390,9 +391,4 @@ with tab2:
         la_return = st.slider("Expected Annual Return (%)", -10.0, 20.0, 7.0)/100
         inflation_rate = st.slider("Annual Inflation (%)", 0.0, 10.0, 4.5)/100
         volatility = st.slider("Market Volatility (Std Dev)", 0.0, 0.3, 0.15)
-        monte_carlo_runs = st.selectbox("Simulation Runs", [100, 500, 1000], index=1)
-
-    # COMPLETE TAX FUNCTION (FIXED AND VERIFIED)
-    def calculate_tax(withdrawal):
-        # 2024 Tax Brackets (FULLY CLOSED LIST)
-        brackets
+        monte_c
