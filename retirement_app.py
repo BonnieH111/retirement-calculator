@@ -395,6 +395,4 @@ with tab2:
     # COMPLETE TAX FUNCTION (2024 SARS RATES)
     def calculate_tax(withdrawal):
         # 2024 Tax Brackets (Under 65)
-        brackets = [
-            (237100, 0.18),
-           
+       
