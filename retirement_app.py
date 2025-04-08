@@ -1,4 +1,3 @@
-`````python name=retirement_app.py
 # ======================
 # IMPORTS
 # ======================
@@ -365,7 +364,7 @@ with tab1:
                 st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
-# LIVING ANNUITY TAB - FULLY CORRECTED
+# LIVING ANNUITY TAB - COMPLETED TAX FUNCTION
 # ======================
 with tab2:
     # Input columns with validation
@@ -398,4 +397,4 @@ with tab2:
         # 2024 Tax Brackets (Under 65)
         brackets = [
             (237100, 0.18),
-            (370 
+            (
