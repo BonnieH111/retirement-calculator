@@ -124,9 +124,14 @@ with tab1:
     life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
     withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
 
-    # Retirement Cash Flow Calculations
+    # 🔴 FIX: Add inflation protection logic
+    with st.expander("🛡️ Inflation Protection"):
+        inflation_rate = st.slider("Annual Inflation (%)", 0.0, 5.0, 2.5) / 100
+        real_return = annual_return - inflation_rate
+
+    # 🔴 FIX: Use real_return in future value calculations
     years_to_retirement = retirement_age - current_age
-    future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
+    future_value = fv(real_return, years_to_retirement, 0, -retirement_savings)
 
     years_in_retirement = life_expectancy - retirement_age
     if years_in_retirement <= 0:
@@ -139,28 +144,36 @@ with tab1:
     for year in range(years_in_retirement):
         withdrawal = round(balance * withdrawal_rate, 2)
         withdrawals.append(withdrawal)
-        balance = max(0, (balance - withdrawal) * (1 + annual_return))
+        balance = max(0, (balance - withdrawal) * (1 + real_return))
         if balance == 0 and not depletion_age:
             depletion_age = retirement_age + year
+
+    # 🟢 FIX: Add visualization preview
+    fig_preview, ax_preview = plt.subplots(figsize=(10, 6))
+    ax_preview.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+    ax_preview.set_title("Retirement Income Projection", color='#00BFFF', fontsize=14)
+    ax_preview.set_xlabel("Age", color='#228B22', fontsize=12)
+    ax_preview.set_ylabel("Annual Income (R)", color='#FF5E00', fontsize=12)
+    plt.tight_layout()
+    st.pyplot(fig_preview)
+    plt.close(fig_preview)
 
     # PDF Generation
     if st.button("📄 Generate PDF Report"):
         with st.spinner("Generating report..."):
             try:
-                # Save graph to memory buffer
-                fig, ax = plt.subplots()
-                ax.plot(range(retirement_age, life_expectancy), withdrawals, label="Withdrawals")
-                ax.set_title("Retirement Income Over Time")
-                ax.set_xlabel("Age")
-                ax.set_ylabel("Yearly Withdrawals (R)")
-                ax.grid(True)
-                plt.legend()
+                # 🔵 FIX: Use consistent styling in PDF
+                fig_pdf, ax_pdf = plt.subplots(figsize=(10, 6))
+                ax_pdf.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+                ax_pdf.set_title("Retirement Income Projection", color='#00BFFF', fontsize=14)
+                ax_pdf.set_xlabel("Age", color='#228B22', fontsize=12)
+                ax_pdf.set_ylabel("Annual Income (R)", color='#FF5E00', fontsize=12)
                 plt.tight_layout()
 
                 img_buf = io.BytesIO()
-                fig.savefig(img_buf, format='png', dpi=300)
+                fig_pdf.savefig(img_buf, format='png', dpi=300)
                 img_buf.seek(0)
-                plt.close(fig)  # Prevent memory leaks
+                plt.close(fig_pdf)
 
                 # PDF Creation
                 pdf = FPDF()
@@ -168,6 +181,14 @@ with tab1:
                 pdf.set_font("Arial", size=12)
                 pdf.cell(200, 10, txt="Retirement Cash Flow Report", ln=True, align="C")
                 pdf.image(img_buf, x=10, y=30, w=190)
+
+                # 🔴 CRITICAL: Add disclaimer
+                pdf.ln(10)
+                pdf.set_font("Arial", 'I', 8)
+                pdf.multi_cell(0, 5, 
+                    "Disclaimer: Projections based on stated assumptions. Market performance may vary. "
+                    "Consult a financial advisor before making decisions.")
+
                 pdf_output = io.BytesIO()
                 pdf.output(pdf_output)
                 pdf_data = pdf_output.getvalue()
@@ -186,7 +207,6 @@ with tab1:
 # LIVING ANNUITY TAB
 # ======================
 with tab2:
-    # Inputs for Living Annuity
     col1, col2, col3 = st.columns(3)
     with col1:
         current_age = st.number_input("Current Age", 45, 100, 65, key="la_age")
@@ -195,7 +215,6 @@ with tab2:
     with col3:
         life_expectancy = st.number_input("Life Expectancy", 75, 120, 90, key="la_life")
 
-    # Validate inputs
     if current_age >= life_expectancy:
         st.error("Life expectancy must be greater than current age")
         st.stop()
@@ -209,9 +228,11 @@ with tab2:
         volatility = st.slider("Market Volatility (Std Dev)", 0.0, 0.3, 0.15)
         monte_carlo_runs = st.number_input("Simulation Runs", 100, 10000, 1000)
 
-    # Add calculate button and simulation
+    if 'simulations' not in st.session_state:
+        st.session_state.simulations = None
+
     if st.button("🚀 Run Simulation", key="la_calculate"):
-        with st.spinner("Running 1,000 retirement scenarios..."):
+        with st.spinner(f"Running {monte_carlo_runs} scenarios..."):
             years = life_expectancy - current_age
             simulations = np.zeros((years, monte_carlo_runs))
             simulations[0] = investment
@@ -221,14 +242,79 @@ with tab2:
                 simulations[year] = (simulations[year - 1] * (1 + market_return)) * (1 - withdrawal_rate)
                 simulations[year] = np.where(simulations[year] < 0, 0, simulations[year])
 
-            # Plot results
-            fig, ax = plt.subplots(figsize=(10, 6))
-            ax.plot(simulations, color='blue', alpha=0.1)
-            ax.plot(np.median(simulations, axis=1), color='red', linewidth=2, label="Median")
-            ax.set_title("Monte Carlo Retirement Projections")
-            ax.set_xlabel("Years into Retirement")
-            ax.set_ylabel("Portfolio Value (R)")
-            ax.legend()
-            ax.grid(True)
-            st.pyplot(fig)
-            plt.close(fig)  # Prevent memory leaks
+            st.session_state.simulations = simulations
+
+    if st.session_state.simulations is not None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(st.session_state.simulations, color='blue', alpha=0.1)
+        ax.plot(np.median(st.session_state.simulations, axis=1), color='red', linewidth=2, label="Median")
+        ax.set_title("Monte Carlo Retirement Projections", pad=15)
+        ax.set_xlabel("Years into Retirement", labelpad=10)
+        ax.set_ylabel("Portfolio Value (R)", labelpad=10)
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig)
+
+        st.markdown("---")
+        if st.button("📄 Generate Simulation Report", key="la_pdf"):
+            with st.spinner("Creating comprehensive report..."):
+                try:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "Retirement Simulation Report", 0, 1, 'C')
+
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(0, 10, "Simulation Parameters:", 0, 1)
+                    pdf.set_font("Arial", '', 11)
+
+                    params = [
+                        f"Current Age: {current_age}",
+                        f"Retirement Age: {retirement_age}",
+                        f"Life Expectancy: {life_expectancy}",
+                        f"Annuity Value: R{investment:,.2f}",
+                        f"Withdrawal Rate: {withdrawal_rate*100:.1f}%",
+                        f"Expected Return: {la_return*100:.1f}%",
+                        f"Inflation Rate: {inflation_rate*100:.1f}%",
+                        f"Volatility: {volatility*100:.1f}%",
+                        f"Simulation Runs: {monte_carlo_runs}"
+                    ]
+
+                    for param in params:
+                        pdf.cell(0, 8, param, 0, 1)
+
+                    pdf.ln(10)
+                    img_buf = io.BytesIO()
+                    fig_pdf, ax_pdf = plt.subplots(figsize=(10, 6))
+                    ax_pdf.plot(st.session_state.simulations, color='blue', alpha=0.1)
+                    ax_pdf.plot(np.median(st.session_state.simulations, axis=1), color='red', linewidth=2, label="Median")
+                    ax_pdf.set_title("Monte Carlo Projections", pad=15)
+                    ax_pdf.set_xlabel("Years into Retirement", labelpad=10)
+                    ax_pdf.set_ylabel("Portfolio Value (R)", labelpad=10)
+                    plt.tight_layout()
+                    fig_pdf.savefig(img_buf, format='png', dpi=150, bbox_inches='tight')
+                    img_buf.seek(0)
+                    plt.close(fig_pdf)
+
+                    pdf.image(img_buf, x=10, w=190)
+
+                    pdf.ln(10)
+                    pdf.set_font("Arial", 'I', 8)
+                    pdf.multi_cell(0, 5, 
+                        "Disclaimer: This Monte Carlo simulation shows potential outcomes based on historical market behavior "
+                        "and statistical probabilities. Actual results may vary significantly due to market conditions, "
+                        "economic factors, and individual circumstances. This report does not constitute financial advice.")
+
+                    pdf_output = io.BytesIO()
+                    pdf.output(pdf_output)
+                    pdf_data = pdf_output.getvalue()
+
+                    st.success("Report generated successfully!")
+                    st.download_button(
+                        label="⬇️ Download Full Report",
+                        data=pdf_data,
+                        file_name="Retirement_Simulation_Report.pdf",
+                        mime="application/pdf"
+                    )
+                except Exception as e:
+                    st.error(f"PDF generation failed: {str(e)}")
