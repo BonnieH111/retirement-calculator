@@ -168,7 +168,7 @@ with tab1:
     # ======================
     warning_html = ""
     if depletion_age:
-        if depletion_age < life_expectancy:
+        if depletion_age < life expectancy:
             warning_html = f"""
             <div style='margin: 25px 0; padding: 15px; border-radius: 8px;
                         background-color: #ffe6e6; border-left: 6px solid #ff0000;'>
@@ -235,7 +235,7 @@ with tab1:
                 page_width = pdf.w
                 left_margin = 15  # Unified left margin
                 right_margin = 15  # Right margin
-                usable_width = page_width - left_margin - right_margin
+                usable_width = page_width - left_margin - right margin
 
                 # --- Header with Logo & Name ---
                 logo_width = 25  # Reduced size
@@ -394,5 +394,4 @@ with tab2:
 
     # COMPLETE TAX FUNCTION (2024 SARS RATES)
     def calculate_tax(withdrawal):
-        # 2024 Tax Brackets (Under 65)
-       
+        # 2024 Tax Brackets
