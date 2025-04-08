@@ -1,3 +1,4 @@
+`````python name=retirement_app.py
 # ======================
 # IMPORTS
 # ======================
@@ -349,23 +350,22 @@ with tab1:
                 pdf_data = pdf_output.getvalue()
                 
                 # Create columns for success message and download button
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    st.success("PDF generated successfully!")
-                with col2:
-                    # Download button
-                    st.download_button(
-                        label="⬇️ Download PDF Report",
-                        data=pdf_data,
-                        file_name="Juanita_Retirement_Report.pdf",
-                        mime="application/pdf",
-                        help="Click to download your PDF report"
-                    )
+                st.success("PDF generated successfully! Click below to download")
+                
+                # Add direct download button with clear instructions
+                st.download_button(
+                    label="⬇️ Download PDF Report",
+                    data=pdf_data,
+                    file_name="Juanita_Retirement_Report.pdf",
+                    mime="application/pdf",
+                    help="The PDF is ready! Click to save your personalized report",
+                    key="retirement_pdf"  # Unique key for this button
+                )
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
-# LIVING ANNUITY TAB (COMPLETE IMPLEMENTATION)
+# LIVING ANNUITY TAB - FIXED IMPLEMENTATION
 # ======================
 with tab2:
     # Input columns with validation
@@ -384,7 +384,7 @@ with tab2:
 
     # Core parameters
     investment = st.number_input("Annuity Value (R)", value=5_000_000, min_value=100_000, step=50_000, key="la_invest")
-    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw 
 
     # Market assumptions
     with st.expander("⚙️ Market Parameters"):
