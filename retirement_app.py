@@ -397,4 +397,4 @@ with tab2:
         # 2024 Tax Brackets (Under 65)
         brackets = [
             (237100, 0.18),
-            (370500, 
+           
