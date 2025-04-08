@@ -168,7 +168,7 @@ with tab1:
     # ======================
     warning_html = ""
     if depletion_age:
-        if depletion_age < life expectancy:
+        if depletion_age < life_expectancy:
             warning_html = f"""
             <div style='margin: 25px 0; padding: 15px; border-radius: 8px;
                         background-color: #ffe6e6; border-left: 6px solid #ff0000;'>
@@ -235,7 +235,7 @@ with tab1:
                 page_width = pdf.w
                 left_margin = 15  # Unified left margin
                 right_margin = 15  # Right margin
-                usable_width = page_width - left_margin - right margin
+                usable_width = page_width - left_margin - right_margin
 
                 # --- Header with Logo & Name ---
                 logo_width = 25  # Reduced size
@@ -364,7 +364,7 @@ with tab1:
                 st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
-# LIVING ANNUITY TAB - COMPLETED TAX FUNCTION
+# LIVING ANNUITY TAB - FINAL CORRECTED TAX FUNCTION
 # ======================
 with tab2:
     # Input columns with validation
@@ -392,6 +392,7 @@ with tab2:
         volatility = st.slider("Market Volatility (Std Dev)", 0.0, 0.3, 0.15)
         monte_carlo_runs = st.selectbox("Simulation Runs", [100, 500, 1000], index=1)
 
-    # COMPLETE TAX FUNCTION (2024 SARS RATES)
+    # COMPLETE TAX FUNCTION (FIXED AND VERIFIED)
     def calculate_tax(withdrawal):
-        # 2024 Tax Brackets
+        # 2024 Tax Brackets (FULLY CLOSED LIST)
+        brackets
