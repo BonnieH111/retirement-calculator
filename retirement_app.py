@@ -580,4 +580,4 @@ render_footer()
 cleanup_temp_files()
 
 # Final Message
-st.success("Your Retirement Calculator is ready to use! 🎉")e)
+st.success("Your Retirement Calculator is ready to use! 🎉
