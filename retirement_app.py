@@ -115,76 +115,76 @@ def embed_pdf_preview(pdf_bytes):
 # ======================
 # PDF GENERATION: RETIREMENT CASH FLOW
 # ======================
-    # Generate PDF with preview (IMPROVED PORTRAIT A4)
-    if st.button("📄 Generate PDF Report"):
-        try:
-            # Create a new figure specifically for the PDF
-            fig_pdf = plt.figure(figsize=(10, 6))
-            ax_pdf = fig_pdf.add_subplot(111)
-            ax_pdf.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
-            ax_pdf.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
-            ax_pdf.set_title("Retirement Income Projection", color='#00BFFF')
-            ax_pdf.set_xlabel("Age", color='#228B22')
-            ax_pdf.set_ylabel("Annual Income (R)", color='#FF5E00')
-            plt.tight_layout()
+# Generate PDF with preview (IMPROVED PORTRAIT A4)
+if st.button("📄 Generate PDF Report"):
+    try:
+        # Create a new figure specifically for the PDF
+        fig_pdf = plt.figure(figsize=(10, 6))
+        ax_pdf = fig_pdf.add_subplot(111)
+        ax_pdf.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+        ax_pdf.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
+        ax_pdf.set_title("Retirement Income Projection", color='#00BFFF')
+        ax_pdf.set_xlabel("Age", color='#228B22')
+        ax_pdf.set_ylabel("Annual Income (R)", color='#FF5E00')
+        plt.tight_layout()
 
-            # Save figure to a temporary directory
-            with tempfile.TemporaryDirectory() as tmpdir:
-                graph_path = os.path.join(tmpdir, "graph.png")
-                fig_pdf.savefig(graph_path, dpi=300)
-                plt.close(fig_pdf)
+        # Save figure to a temporary directory
+        with tempfile.TemporaryDirectory() as tmpdir:
+            graph_path = os.path.join(tmpdir, "graph.png")
+            fig_pdf.savefig(graph_path, dpi=300)
+            plt.close(fig_pdf)
 
-                # Create PDF in portrait A4 format
-                pdf = FPDF(orientation='P', format='A4')
-                pdf.add_page()
-                pdf.set_auto_page_break(auto=True, margin=15)
+            # Create PDF in portrait A4 format
+            pdf = FPDF(orientation='P', format='A4')
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
 
-                # Add Unicode font for emoji support
-                pdf.add_font("DejaVu", "", "DejaVuSansCondensed.ttf", uni=True)
-                pdf.set_font("DejaVu", "", 11)
+            # Add Unicode font for emoji support
+            pdf.add_font("DejaVu", "", "DejaVuSansCondensed.ttf", uni=True)
+            pdf.set_font("DejaVu", "", 11)
 
-                # Add logo and title
-                temp_logo = save_temp_logo()
-                if temp_logo:
-                    pdf.image(temp_logo, x=15, y=15, w=20)
-                    os.unlink(temp_logo)  # Clean up temporary file
+            # Add logo and title
+            temp_logo = save_temp_logo()
+            if temp_logo:
+                pdf.image(temp_logo, x=15, y=15, w=20)
+                os.unlink(temp_logo)  # Clean up temporary file
 
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(0, 10, "BHJCF Studio", ln=True, align='C')
-                pdf.ln(10)
-                pdf.cell(0, 10, "Retirement Calculator Report", ln=True, align='C')
-                pdf.ln(20)
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "BHJCF Studio", ln=True, align='C')
+            pdf.ln(10)
+            pdf.cell(0, 10, "Retirement Calculator Report", ln=True, align='C')
+            pdf.ln(20)
 
-                # Add client details
-                pdf.set_font("Arial", '', 12)
-                pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True)
-                pdf.cell(0, 10, f"Current Age: {current_age}", ln=True)
-                pdf.cell(0, 10, f"Retirement Age: {retirement_age}", ln=True)
-                pdf.cell(0, 10, f"Life Expectancy: {life_expectancy}", ln=True)
-                pdf.cell(0, 10, f"Future Savings Value: R{future_value:,.2f}", ln=True)
-                pdf.ln(10)
+            # Add client details
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True)
+            pdf.cell(0, 10, f"Current Age: {current_age}", ln=True)
+            pdf.cell(0, 10, f"Retirement Age: {retirement_age}", ln=True)
+            pdf.cell(0, 10, f"Life Expectancy: {life_expectancy}", ln=True)
+            pdf.cell(0, 10, f"Future Savings Value: R{future_value:,.2f}", ln=True)
+            pdf.ln(10)
 
-                # Add graph
-                pdf.cell(0, 10, "Retirement Income Projection", ln=True, align='C')
-                pdf.image(graph_path, x=15, w=180)
+            # Add graph
+            pdf.cell(0, 10, "Retirement Income Projection", ln=True, align='C')
+            pdf.image(graph_path, x=15, w=180)
 
-                # Add disclaimer
-                pdf.set_font("Arial", 'I', 8)
-                pdf.set_text_color(128)
-                pdf.ln(10)
-                pdf.multi_cell(0, 10, "Disclaimer: This report is for informational purposes only. Consult a qualified financial advisor before making any decisions.")
+            # Add disclaimer
+            pdf.set_font("Arial", 'I', 8)
+            pdf.set_text_color(128)
+            pdf.ln(10)
+            pdf.multi_cell(0, 10, "Disclaimer: This report is for informational purposes only. Consult a qualified financial advisor before making any decisions.")
 
-                # Save PDF to BytesIO
-                pdf_output = io.BytesIO()
-                pdf.output(pdf_output)
-                pdf_bytes = pdf_output.getvalue()
+            # Save PDF to BytesIO
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            pdf_bytes = pdf_output.getvalue()
 
-                # Embed PDF preview in Streamlit
-                embed_pdf_preview(pdf_bytes)
+            # Embed PDF preview in Streamlit
+            embed_pdf_preview(pdf_bytes)
 
-        except Exception as e:
-            st.error(f"Error generating PDF: {str(e)}")
-            st.exception(e)
+    except Exception as e:
+        st.error(f"Error generating PDF: {str(e)}")
+        st.exception(e)
 
 # ======================
 # LIVING ANNUITY TAB (ENHANCED)
@@ -194,15 +194,15 @@ with tab2:
     with col1:
         la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
     with col2:
-        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  
+        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")
 
     if la_retirement_age <= la_current_age:
         st.error("❌ Retirement age must be AFTER current age!")
         st.stop()
 
     investment = st.number_input("Total Investment (R)", value=5000000, key="la_invest")
-    la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return")/100
-    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw")/100
+    la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return") / 100
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw") / 100
 
     calculate_btn = st.button("🚀 CALCULATE LIVING ANNUITY PROJECTIONS", key="la_btn")
 
@@ -224,10 +224,13 @@ with tab2:
             balances.append(balance)
             year_count += 1
 
-        # Longevity Assessment (Updated for Unicode font fix)
-        longevity_text = f"[SUSTAINABLE] Funds beyond {year_count} years" if balance > 0 else \
-                         f"[DEPLETED] Funds exhausted at age {la_retirement_age + year_count}"
-        longevity_color = "#00FF00" if balance > 0 else "#FF0000"
+        # Longevity Assessment
+        if balance <= 0:
+            longevity_text = f"[DEPLETED] Funds after {year_count} years (age {la_retirement_age + year_count})"
+            longevity_color = "#FF0000"
+        else:
+            longevity_text = f"[SUSTAINABLE] Funds beyond {year_count} years"
+            longevity_color = "#00FF00"
 
         # Display Results
         st.markdown(f"""
@@ -320,7 +323,57 @@ with tab2:
 
                     # Create PDF
                     pdf = FPDF(orientation='P', format='A4')
-                    pdf.add
+                    pdf.add_page()
+                    pdf.set_auto_page_break(auto=True, margin=15)
+
+                    # Add Unicode font for emoji support
+                    pdf.add_font("DejaVu", "", "DejaVuSansCondensed.ttf", uni=True)
+                    pdf.set_font("DejaVu", "", 11)
+
+                    # Add logo and title
+                    temp_logo = save_temp_logo()
+                    if temp_logo:
+                        pdf.image(temp_logo, x=15, y=15, w=20)
+                        os.unlink(temp_logo)
+
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "Living Annuity Simulation Report", ln=True, align='C')
+                    pdf.ln(10)
+
+                    # Add client information
+                    pdf.set_font("Arial", '', 12)
+                    pdf.cell(0, 10, f"Investment Amount: R{investment:,.2f}", ln=True)
+                    pdf.cell(0, 10, f"Monthly Income: R{monthly_income:,.2f}", ln=True)
+                    pdf.cell(0, 10, longevity_text, ln=True)
+                    pdf.ln(10)
+
+                    # Add charts
+                    pdf.cell(0, 10, "Investment Balance Projection", ln=True, align='C')
+                    pdf.image(balance_path, x=15, w=180)
+                    pdf.ln(10)
+                    pdf.cell(0, 10, "Withdrawal Amount Projection", ln=True, align='C')
+                    pdf.image(withdrawal_path, x=15, w=180)
+
+                    # Save PDF to BytesIO
+                    pdf_output = io.BytesIO()
+                    pdf.output(pdf_output)
+                    pdf_bytes = pdf_output.getvalue()
+
+                    # Embed PDF preview
+                    embed_pdf_preview(pdf_bytes)
+
+                    # Add download button
+                    st.download_button(
+                        label="⬇️ Download Full Report",
+                        data=pdf_bytes,
+                        file_name="living_annuity_report.pdf",
+                        mime="application/pdf",
+                        key="la_download"
+                    )
+
+            except Exception as e:
+                st.error(f"Error generating PDF: {str(e)}")
+                st.exception(e)
 
 # ======================
 # LIVING ANNUITY SIMULATOR TAB
@@ -581,3 +634,5 @@ cleanup_temp_files()
 
 # Final Message
 st.success("Your Retirement Calculator is ready to use! 🎉")
+
+
