@@ -575,4 +575,3 @@ with tab2:
                 st.error(f"Error generating PDF: {str(e)}")
                 st.exception(e)
 
-
