@@ -2,32 +2,48 @@
 # IMPORTS
 # ======================
 
-# Standard Library Imports
+# Standard Library
 import base64
 import os
 import io
+import sys
 import time
+import logging
+import tempfile
+from datetime import datetime
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-# Third-Party Library Imports
+# Third-Party
 import matplotlib
-matplotlib.use('Agg')  # CRITICAL FOR STREAMLIT CLOUD
+matplotlib.use('Agg')  # Must be before pyplot import
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
-from numpy_financial import fv, pmt
-from PIL import Image
+from numpy_financial import fv, pmt, npv, irr
+from PIL import Image, ImageOps
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos  # Added for Unicode font support
+from fpdf.enums import XPos, YPos, Align
 import streamlit as st
+
+# Custom Configuration
+sys.path.append(".")  # For local module resolution
 
 # ======================
 # APP CONFIGURATION
 # ======================
 
 # Set the page layout and title for the Streamlit app (MUST BE FIRST STREAMLIT COMMAND)
-st.set_page_config(layout="wide", page_title="Retirement Calculator")
+st.set_page_config(
+    layout="wide", 
+    page_title="Retirement Calculator",
+    page_icon="💰",
+    menu_items={
+        "Get Help": "mailto:support@bhjcfstudio.com",
+        "About": "Dual retirement planning solution by BHJCF Studio"
+    }
+)
 
-# Custom CSS for styling the app
+# Custom CSS for styling the app (FULL VERSION)
 st.markdown("""
 <style>
 /* Customize slider background color */
@@ -63,6 +79,7 @@ h1 {
     font-size: 36px; 
     font-weight: bold; 
     text-align: center; 
+    margin-bottom: 0.5rem;
 }
 
 /* Footer styling */
@@ -70,10 +87,69 @@ h1 {
     text-align: center; 
     font-size: 14px; 
     color: #555; 
-    margin-top: 20px; 
+    margin-top: 20px;
+    padding: 1rem;
+    border-top: 2px solid #00BFFF;
+}
+
+/* Chart styling */
+.matplotlib-chart { 
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 1rem 0;
 }
 </style>
 """, unsafe_allow_html=True)
+
+# Global Constants
+PRIMARY_COLOR = "#00BFFF"
+SECONDARY_COLOR = "#FF5E00"
+FONT_SIZE_LARGE = "36px"
+MAX_SIMULATION_YEARS = 50
+LOGO_PATHS = [
+    "static/bhjcf-logo.png",
+    "attached_assets/IMG_0019.png",
+    "bhjcf-logo.png",
+    "generated-icon.png"
+]
+
+# Logging Configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("retirement_app.log", mode="a")
+    ]
+)
+
+# Debugging Initialization
+logging.info("Application initialized successfully")
+logging.debug(f"Matplotlib backend: {matplotlib.get_backend()}")
+logging.debug(f"Current working directory: {os.getcwd()}")
+
+# Session State Initialization (COMPREHENSIVE)
+if "la_data" not in st.session_state:
+    st.session_state.la_data = {
+        'initialized': False,
+        'projections': None,
+        'charts': None
+    }
+
+if "rc_data" not in st.session_state:
+    st.session_state.rc_data = {
+        'initialized': False,
+        'projections': None,
+        'charts': None
+    }
+
+if "app_settings" not in st.session_state:
+    st.session_state.app_settings = {
+        'theme': 'light',
+        'currency': 'ZAR',
+        'font_scale': 1.0
+    }
 
 # ======================
 # BRANDING & LOGO FUNCTIONS
@@ -139,62 +215,204 @@ if not logo_path or not os.path.exists(logo_path):
     logo_path = DEFAULT_LOGO_PATH  # Default to this if it exists
 
 # ======================
-# PDF PREVIEW FUNCTION
+# PDF SYSTEM (Unified Section)
 # ======================
-def embed_pdf_preview(pdf_bytes, iframe_height=800):
+
+# ----------------------
+# PDF Preview Functionality
+# ----------------------
+def display_pdf_preview(pdf_bytes):
     """
-    Display PDF preview in Streamlit.
+    Displays a PDF preview within the Streamlit app.
 
     Args:
-        pdf_bytes (bytes): The PDF file content in bytes.
-        iframe_height (int): The height of the iframe in pixels (default is 800).
-
-    Returns:
-        None: Displays the PDF in the Streamlit app.
+        pdf_bytes (bytes): The PDF content as bytes.
     """
-    if not pdf_bytes:
-        st.error("⚠️ No PDF content available to preview.")
-        return
-
     try:
-        # Convert PDF bytes to Base64
         base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-        
-        # Embed PDF in an iframe
-        pdf_display = f'''
-        <div style="border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; margin: 20px 0;">
+        st.markdown(f"""
+        <div style="border: 2px solid {PRIMARY_COLOR}; border-radius: 10px; padding: 20px; margin: 20px 0;">
+            <h4 style="text-align:center; color:{SECONDARY_COLOR};">PDF Preview</h4>
             <iframe src="data:application/pdf;base64,{base64_pdf}" 
                     width="100%" 
-                    height="{iframe_height}px" 
+                    height="800px" 
                     style="border: none;">
             </iframe>
         </div>
-        '''
-        st.markdown(pdf_display, unsafe_allow_html=True)
-
+        """, unsafe_allow_html=True)
     except Exception as e:
-        # Handle unexpected errors
-        st.error(f"⚠️ An error occurred while generating the PDF preview: {str(e)}")
-        import logging
-        logging.error(f"PDF Preview Error: {e}")
+        log_and_display_error("Failed to display PDF preview", e)
+
+# ----------------------
+# PDF Generation for Retirement Calculator
+# ----------------------
+def generate_retirement_pdf(client_name, current_age, retirement_age, life_expectancy, future_value, withdrawals):
+    """
+    Generate a Retirement Cash Flow PDF with client details and income projection graph.
+    """
+    try:
+        with TemporaryDirectory() as tmpdir:
+            # Create chart for PDF
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+            ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
+            ax.set_title("Retirement Income Projection", color='#00BFFF')
+            ax.set_xlabel("Age", color='#228B22')
+            ax.set_ylabel("Annual Income (R)", color='#FF5E00')
+            plt.tight_layout()
+
+            chart_path = os.path.join(tmpdir, "chart.png")
+            fig.savefig(chart_path, dpi=300)
+            plt.close(fig)
+
+            # Create PDF
+            pdf = FPDF(orientation='P', format='A4')
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+
+            # Add title and client details
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "Retirement Calculator Report", ln=True, align='C')
+            pdf.ln(10)
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Client Name: {client_name}", ln=True)
+            pdf.cell(0, 10, f"Current Age: {current_age}", ln=True)
+            pdf.cell(0, 10, f"Retirement Age: {retirement_age}", ln=True)
+            pdf.cell(0, 10, f"Life Expectancy: {life_expectancy}", ln=True)
+            pdf.cell(0, 10, f"Future Value: R{future_value:,.2f}", ln=True)
+            pdf.ln(10)
+
+            # Add chart
+            pdf.cell(0, 10, "Retirement Income Projection", ln=True, align='C')
+            pdf.image(chart_path, x=15, w=180)
+
+            # Save PDF to bytes
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            return pdf_output.getvalue()
+    except Exception as e:
+        log_and_display_error("Error generating PDF", e)
+        return None
+
+# ----------------------
+# PDF Generation for Living Annuity Simulator
+# ----------------------
+def generate_living_annuity_pdf(la_data):
+    """
+    Generate a Living Annuity PDF report.
+    """
+    try:
+        with TemporaryDirectory() as tmpdir:
+            # Extract data from session state
+            depletion_years = la_data['depletion_years']
+            balances = la_data['balances']
+            withdrawal_amounts = la_data['withdrawal_amounts']
+
+            # Create balance chart
+            fig1, ax1 = plt.subplots(figsize=(8, 5))
+            ax1.plot(depletion_years, balances, color='#228B22', linewidth=2.5)
+            ax1.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+            ax1.set_title("Investment Balance Timeline", color='#00BFFF')
+            ax1.set_xlabel("Age", color='#228B22')
+            ax1.set_ylabel("Remaining Balance (R)", color='#FF5E00')
+            plt.tight_layout()
+
+            balance_path = os.path.join(tmpdir, "balance_chart.png")
+            fig1.savefig(balance_path, dpi=300)
+            plt.close(fig1)
+
+            # Create withdrawal chart
+            fig2, ax2 = plt.subplots(figsize=(8, 5))
+            ax2.plot(depletion_years, withdrawal_amounts, color='#FF0000', linewidth=2.5)
+            ax2.fill_between(depletion_years, withdrawal_amounts, color='#FFAA33', alpha=0.3)
+            ax2.set_title("Annual Withdrawal Amounts", color='#FF5E00')
+            ax2.set_xlabel("Age", color='#228B22')
+            ax2.set_ylabel("Withdrawal Amount (R)", color='#FF5E00')
+            plt.tight_layout()
+
+            withdrawal_path = os.path.join(tmpdir, "withdrawal_chart.png")
+            fig2.savefig(withdrawal_path, dpi=300)
+            plt.close(fig2)
+
+            # Create PDF
+            pdf = FPDF(orientation='P', format='A4')
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+
+            # Add title and client details
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "Living Annuity Simulation Report", ln=True, align='C')
+            pdf.ln(10)
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Monthly Income: R{la_data['monthly_income']:,.2f}", ln=True)
+            pdf.cell(0, 10, la_data['longevity_text'], ln=True)
+            pdf.ln(10)
+
+            # Add charts
+            pdf.cell(0, 10, "Investment Balance Projection", ln=True, align='C')
+            pdf.image(balance_path, x=15, w=180)
+            pdf.ln(10)
+            pdf.cell(0, 10, "Withdrawal Amount Projection", ln=True, align='C')
+            pdf.image(withdrawal_path, x=15, w=180)
+
+            # Save PDF to bytes
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            return pdf_output.getvalue()
+    except Exception as e:
+        log_and_display_error("Error generating Living Annuity PDF", e)
+        return None
+
+# ======================
+# PDF PREVIEW FUNCTION
+# ======================
+def log_and_display_error(error_message, exception=None):
+    """
+    Logs an error and displays it to the user in Streamlit.
+    
+    Args:
+        error_message (str): The error message to display.
+        exception (Exception, optional): The exception object to log (if any).
+    """
+    logging.error(error_message)
+    if exception:
+        logging.exception(exception)
+    st.error(f"🚨 {error_message}")
+    if exception:
+        st.exception(exception)
+
+def display_pdf_preview(pdf_bytes):
+    """
+    Displays a PDF preview within the Streamlit app.
+
+    Args:
+        pdf_bytes (bytes): The PDF content as bytes.
+    """
+    try:
+        # Convert PDF bytes to Base64 for embedding
+        base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+
+        # Create an iframe to display the PDF preview
+        st.markdown(f"""
+        <div style="border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; margin: 20px 0;">
+            <h4 style="text-align:center; color:#228B22;">PDF Preview</h4>
+            <iframe src="data:application/pdf;base64,{base64_pdf}" 
+                    width="100%" 
+                    height="800px" 
+                    style="border: none;">
+            </iframe>
+        </div>
+        """, unsafe_allow_html=True)
+    except Exception as e:
+        log_and_display_error("Failed to display the PDF preview.", e)
 
 # ======================
 # PDF GENERATION: RETIREMENT CASH FLOW
 # ======================
+
 def generate_retirement_pdf(client_name, current_age, retirement_age, life_expectancy, future_value, withdrawals):
     """
     Generate a Retirement Cash Flow PDF with client details and income projection graph.
-
-    Args:
-        client_name (str): The name of the client.
-        current_age (int): The current age of the client.
-        retirement_age (int): The retirement age of the client.
-        life_expectancy (int): The expected lifespan of the client.
-        future_value (float): The future value of savings.
-        withdrawals (list): Annual withdrawal amounts over time.
-
-    Returns:
-        None: Displays the PDF preview in the Streamlit app.
     """
     with st.spinner("Generating PDF..."):
         try:
@@ -209,7 +427,7 @@ def generate_retirement_pdf(client_name, current_age, retirement_age, life_expec
             plt.tight_layout()
 
             # Save figure to a temporary directory
-            with tempfile.TemporaryDirectory() as tmpdir:
+            with TemporaryDirectory() as tmpdir:
                 graph_path = os.path.join(tmpdir, "graph.png")
                 fig_pdf.savefig(graph_path, dpi=300)
                 plt.close(fig_pdf)
@@ -264,11 +482,10 @@ def generate_retirement_pdf(client_name, current_age, retirement_age, life_expec
 
         except Exception as e:
             st.error(f"Error generating PDF: {str(e)}")
-            import logging
             logging.error(f"Error in Retirement PDF Generation: {e}")
 
 # ======================
-# TAB DEFINITIONS
+# TAB DEFINITIONS AND FUNCTIONALITY
 # ======================
 
 # Create tabs for the app
@@ -289,7 +506,7 @@ with tab3:
     st.header("About")
     st.markdown("""
     This application was developed by **BHJCF Studio** to assist users in planning their retirement.
-    For support, please contact us at [support@bhjcfstudio.com](mailto:support@bhjcfstudio.com).
+    For support, please contact us at [brumbollharding@icloud.com](mailto:brumbollharding@icloud.com).
     """)
 
 # ======================
@@ -488,6 +705,160 @@ if 'la_data' in st.session_state:
             st.exception(e)
 
 # ======================
+# RETIREMENT CALCULATOR TAB (FINAL UNIFIED VERSION)
+# ======================
+with tab1:
+    # Header
+    st.header("Retirement Calculator")
+    st.markdown("Plan your retirement by calculating how your savings and withdrawals align with your goals.")
+
+    # Input Section
+    col1, col2 = st.columns(2)
+    with col1:
+        current_age = st.slider("Current Age", 25, 100, 45, key="rc_age")
+    with col2:
+        retirement_age = st.slider("Retirement Age", 55, 100, 65, key="rc_retire")
+
+    # Age Validation
+    if retirement_age <= current_age:
+        st.error("❌ Retirement age must be AFTER current age!")
+        st.stop()
+
+    # Financial Inputs
+    future_savings = st.number_input("Future Value of Savings (R)", value=1_000_000, step=10_000, key="rc_savings")
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 1.0, 10.0, 4.0, key="rc_withdraw") / 100
+    annual_return = st.slider("Expected Annual Return (%)", 1.0, 20.0, 7.0, key="rc_return") / 100
+
+    # Calculation Section
+    if st.button("🚀 CALCULATE RETIREMENT PROJECTIONS", key="rc_calculate"):
+        try:
+            # Perform Calculations
+            annual_withdrawal = future_savings * withdrawal_rate
+            monthly_withdrawal = annual_withdrawal / 12
+
+            # Simulation Parameters
+            balance = future_savings
+            year_count = 0
+            MAX_YEARS = MAX_SIMULATION_YEARS
+            depletion_years = []
+            balances = []
+
+            # Run Simulation
+            while balance > 0 and year_count < MAX_YEARS:
+                withdrawal = annual_withdrawal
+                balance = (balance - withdrawal) * (1 + annual_return)
+                depletion_years.append(retirement_age + year_count)
+                balances.append(balance)
+                year_count += 1
+
+            # Longevity Assessment
+            longevity_status = "[DEPLETED]" if balance <= 0 else "[SUSTAINABLE]"
+            longevity_color = "#FF4444" if balance <= 0 else "#44CC44"
+            longevity_text = (
+                f"{longevity_status} Funds after {year_count} years "
+                f"(age {retirement_age + year_count})"
+            )
+
+            # Store Results in Session State
+            st.session_state.rc_data = {
+                'depletion_years': depletion_years,
+                'balances': balances,
+                'annual_withdrawal': annual_withdrawal,
+                'monthly_withdrawal': monthly_withdrawal,
+                'longevity_text': longevity_text,
+                'longevity_color': longevity_color,
+                'future_savings': future_savings,
+                'withdrawal_rate': withdrawal_rate,
+                'annual_return': annual_return,
+                'current_age': current_age,
+                'retirement_age': retirement_age,
+                'year_count': year_count
+            }
+
+        except Exception as e:
+            st.error(f"Calculation Error: {str(e)}")
+            logging.error(f"Calculation Failed: {traceback.format_exc()}")
+            st.stop()
+
+    # Display Results
+    if 'rc_data' in st.session_state:
+        rc_data = st.session_state.rc_data
+
+        # Formatted Results Display
+        st.markdown(f"""
+        <div style='margin: 2rem 0; padding: 1.5rem; border-radius: 10px; 
+                    background: #F8F9FA; box-shadow: 0 2px 4px rgba(0,0,0,0.1)'>
+            <h3 style='color: {PRIMARY_COLOR}; margin-bottom: 1rem;'>Projection Results</h3>
+            
+            <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;'>
+                <div>
+                    <p style='font-size: 0.9rem; color: #666; margin: 0;'>Annual Withdrawal</p>
+                    <p style='font-size: 1.8rem; color: {SECONDARY_COLOR}; margin: 0;'>
+                        R{rc_data['annual_withdrawal']:,.2f}
+                    </p>
+                </div>
+                
+                <div>
+                    <p style='font-size: 0.9rem; color: #666; margin: 0;'>Monthly Withdrawal</p>
+                    <p style='font-size: 1.8rem; color: {SECONDARY_COLOR}; margin: 0;'>
+                        R{rc_data['monthly_withdrawal']:,.2f}
+                    </p>
+                </div>
+            </div>
+            
+            <div style='margin-top: 1.5rem; padding: 1rem; border-radius: 8px;
+                        background: {rc_data['longevity_color']}22; 
+                        border-left: 4px solid {rc_data['longevity_color']};'>
+                <p style='margin: 0; color: {rc_data['longevity_color']}; 
+                          font-weight: 600; font-size: 1.1rem;'>
+                    {rc_data['longevity_text']}
+                </p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Generate Visualization
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(rc_data['depletion_years'], rc_data['balances'], color=PRIMARY_COLOR, linewidth=2.5)
+        ax.fill_between(rc_data['depletion_years'], rc_data['balances'], color=f"{PRIMARY_COLOR}40")
+        ax.set_title("Retirement Savings Projection", color=SECONDARY_COLOR, fontsize=14, pad=20)
+        ax.set_xlabel("Age", color=SECONDARY_COLOR, fontsize=12)
+        ax.set_ylabel("Remaining Balance (R)", color=SECONDARY_COLOR, fontsize=12)
+        ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: f"R{x:,.0f}"))
+        ax.grid(True, linestyle='--', alpha=0.3, color=SECONDARY_COLOR)
+        plt.tight_layout()
+        st.pyplot(fig)
+
+        # PDF Generation Section
+        st.markdown("---")
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if st.button("📄 Generate PDF Report", key="rc_pdf"):
+                try:
+                    pdf_bytes = generate_retirement_pdf(
+                        client_name="Client",
+                        current_age=rc_data['current_age'],
+                        retirement_age=rc_data['retirement_age'],
+                        life_expectancy=rc_data['retirement_age'] + rc_data['year_count'],
+                        future_value=rc_data['future_savings'],
+                        withdrawals=[rc_data['annual_withdrawal']] * rc_data['year_count']
+                    )
+                    
+                    if pdf_bytes:
+                        with col2:
+                            embed_pdf_preview(pdf_bytes)
+                            st.download_button(
+                                label="⬇️ Download Full Report",
+                                data=pdf_bytes,
+                                file_name="retirement_report.pdf",
+                                mime="application/pdf",
+                                key="rc_download"
+                            )
+                except Exception as e:
+                    st.error(f"PDF Generation Failed: {str(e)}")
+                    logging.error(f"PDF Error: {traceback.format_exc()}")
+
+# ======================
 # RETIREMENT CALCULATOR TAB
 # ======================
 
@@ -615,66 +986,50 @@ import logging
 logging.info(f"Session State: {st.session_state}")
 
 # ======================
-# UTILITIES
+# UTILITY FUNCTIONS
 # ======================
-
-import os
-import base64
-from tempfile import NamedTemporaryFile
-from PIL import Image
-import io
-
 def get_logo_path():
-    """Find the path to the logo image."""
-    logo_paths = [
-        "static/bhjcf-logo.png", 
-        "attached_assets/IMG_0019.png", 
-        "bhjcf-logo.png",
-        "generated-icon.png"  # Added as last resort
-    ]
-
+    logo_paths = LOGO_PATHS
     for path in logo_paths:
         if os.path.exists(path):
             return path
-    return "attached_assets/IMG_0019.png"  # Default fallback
+    return "attached_assets/IMG_0019.png"
 
 def get_logo_as_base64(logo_path):
-    """Convert the logo to base64 for embedding in HTML/PDF."""
     try:
-        if logo_path and os.path.exists(logo_path):
+        if os.path.exists(logo_path):
             with open(logo_path, "rb") as img_file:
                 return base64.b64encode(img_file.read()).decode('utf-8')
     except Exception as e:
-        print(f"Error converting logo to Base64: {e}")
+        logging.error(f"Logo conversion error: {e}")
     return None
 
 def save_temp_logo():
-    """Create a temporary file with the logo for safe use with FPDF."""
-    logo_path = get_logo_path()
-    if logo_path and os.path.exists(logo_path):
-        try:
-            temp_file = NamedTemporaryFile(delete=False, suffix=".png")
-            img = Image.open(logo_path)
-            img.save(temp_file.name)
-            temp_file.close()
-            return temp_file.name
-        except Exception as e:
-            print(f"Error saving temporary logo file: {e}")
+    try:
+        logo_path = get_logo_path()
+        if logo_path:
+            with NamedTemporaryFile(delete=False, suffix=".png") as temp_file:
+                img = Image.open(logo_path)
+                img.save(temp_file.name)
+                return temp_file.name
+    except Exception as e:
+        logging.error(f"Temp logo error: {e}")
     return None
 
-def embed_pdf_preview(pdf_bytes):
-    """Display PDF preview in Streamlit."""
-    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-    pdf_display = f'''
-    <div style="border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; margin: 20px 0;">
-        <iframe src="data:application/pdf;base64,{base64_pdf}" 
-                width="100%" 
-                height="800px" 
-                style="border: none;">
-        </iframe>
-    </div>
-    '''
-    st.markdown(pdf_display, unsafe_allow_html=True)
+def embed_pdf_preview(pdf_bytes, iframe_height=800):
+    try:
+        base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        pdf_display = f'''
+        <div style="border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; margin: 20px 0;">
+            <iframe src="data:application/pdf;base64,{base64_pdf}" 
+                    width="100%" 
+                    height="{iframe_height}px" 
+                    style="border: none;">
+            </iframe>
+        </div>'''
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"PDF preview error: {str(e)}")
 
 # ======================
 # MAIN SCRIPT
@@ -744,16 +1099,20 @@ def log_and_display_error(error_message, exception=None):
         st.exception(exception)
 
 # ======================
-# PDF GENERATION
+# PDF GENERATION (FULLY REVISED)
 # ======================
 
-from fpdf import FPDF
 import os
+import io
 import matplotlib.pyplot as plt
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from fpdf import FPDF
+import traceback
+import logging
 
 def generate_retirement_pdf(client_name, current_age, retirement_age, life_expectancy, future_value, withdrawals):
     """
-    Generates a PDF report for the retirement cash flow simulation.
+    Generates a comprehensive PDF report for the retirement cash flow simulation.
 
     Args:
         client_name (str): The name of the client.
@@ -762,96 +1121,164 @@ def generate_retirement_pdf(client_name, current_age, retirement_age, life_expec
         life_expectancy (int): Estimated age when the funds are depleted.
         future_value (float): Future value of savings or investments.
         withdrawals (list): Annual withdrawal amounts.
-    """
-    try:
-        # Create a PDF instance
-        pdf = FPDF(orientation='P', format='A4')
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=15)
-
-        # Add Unicode font for emoji support
-        pdf.add_font("DejaVu", "", "DejaVuSansCondensed.ttf", uni=True)
-        pdf.set_font("DejaVu", "", 11)
-
-        # Add logo and title
-        temp_logo = save_temp_logo()
-        if temp_logo:
-            pdf.image(temp_logo, x=15, y=15, w=20)
-            os.unlink(temp_logo)
-
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Retirement Cash Flow Simulation Report", ln=True, align='C')
-        pdf.ln(10)
-
-        # Add client information
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Client Name: {client_name}", ln=True)
-        pdf.cell(0, 10, f"Current Age: {current_age}", ln=True)
-        pdf.cell(0, 10, f"Retirement Age: {retirement_age}", ln=True)
-        pdf.cell(0, 10, f"Life Expectancy (Funds Depleted): {life_expectancy}", ln=True)
-        pdf.cell(0, 10, f"Future Value of Savings: R{future_value:,.2f}", ln=True)
-        pdf.ln(10)
-
-        # Add withdrawal chart
-        pdf.cell(0, 10, "Annual Withdrawal Projection", ln=True, align='C')
-        withdrawal_chart_path = generate_withdrawal_chart(withdrawals, retirement_age)
-        if withdrawal_chart_path:
-            pdf.image(withdrawal_chart_path, x=15, w=180)
-
-        # Save PDF to BytesIO
-        pdf_output = io.BytesIO()
-        pdf.output(pdf_output)
-        pdf_bytes = pdf_output.getvalue()
-
-        # Return the PDF bytes for downloading or preview
-        return pdf_bytes
-
-    except Exception as e:
-        log_and_display_error("Failed to generate the PDF report.", e)
-
-def generate_withdrawal_chart(withdrawals, retirement_age):
-    """
-    Creates a chart for annual withdrawals and saves it as a temporary image.
-
-    Args:
-        withdrawals (list): Annual withdrawal amounts.
-        retirement_age (int): Retirement age of the client.
 
     Returns:
-        str: Path to the saved chart image.
+        bytes: The generated PDF as bytes for downloading or previewing.
     """
+    with st.spinner("🔖 Generating Comprehensive PDF Report..."):
+        try:
+            # Validate font file presence
+            if not os.path.exists("DejaVuSansCondensed.ttf"):
+                raise FileNotFoundError("Required font file DejaVuSansCondensed.ttf not found in root directory")
+
+            # Create temporary workspace
+            with TemporaryDirectory() as tmpdir:
+                # Generate main projection chart
+                fig_pdf = plt.figure(figsize=(10, 6))
+                ax_pdf = fig_pdf.add_subplot(111)
+                ax_pdf.plot(range(retirement_age, life_expectancy), withdrawals, 
+                           color='#FF0000', linewidth=2)
+                ax_pdf.fill_between(range(retirement_age, life_expectancy), withdrawals, 
+                                   color='#7FFF00', alpha=0.3)
+                ax_pdf.set_title("Retirement Income Projection", color=PRIMARY_COLOR)
+                ax_pdf.set_xlabel("Age", color=SECONDARY_COLOR)
+                ax_pdf.set_ylabel("Annual Income (R)", color=SECONDARY_COLOR)
+                ax_pdf.grid(True, linestyle='--', alpha=0.7)
+                plt.tight_layout()
+                graph_path = os.path.join(tmpdir, "main_graph.png")
+                fig_pdf.savefig(graph_path, dpi=300)
+                plt.close(fig_pdf)
+
+                # Generate secondary withdrawal chart
+                withdrawal_chart_path = generate_withdrawal_chart(withdrawals, retirement_age, tmpdir)
+
+                # PDF Document Setup
+                pdf = FPDF(orientation='P', format='A4')
+                pdf.add_page()
+                pdf.set_auto_page_break(auto=True, margin=15)
+                
+                # Add custom font
+                pdf.add_font("DejaVu", "", "DejaVuSansCondensed.ttf", uni=True)
+                pdf.set_font("DejaVu", "", 11)
+
+                # Header Section
+                temp_logo = save_temp_logo()
+                if temp_logo and os.path.exists(temp_logo):
+                    pdf.image(temp_logo, x=15, y=15, w=20)
+                    os.unlink(temp_logo)  # Cleanup temp file
+                
+                pdf.set_font("Arial", 'B', 16)
+                pdf.cell(0, 10, "BHJCF Retirement Report", ln=True, align='C')
+                pdf.ln(15)
+
+                # Client Details Section
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(40, 10, "Client Name:", ln=0)
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 10, client_name, ln=True)
+                
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(40, 10, "Current Age:", ln=0)
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 10, str(current_age), ln=True)
+                
+                # Add financial details table
+                pdf.ln(10)
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Financial Summary", ln=True)
+                pdf.set_font("Arial", '', 12)
+                
+                financial_data = [
+                    ("Future Savings Value", f"R{future_value:,.2f}"),
+                    ("Retirement Age", str(retirement_age)),
+                    ("Life Expectancy", str(life_expectancy)),
+                    ("Projected Annual Withdrawal", f"R{withdrawals[0]:,.2f}")
+                ]
+                
+                for label, value in financial_data:
+                    pdf.cell(70, 10, label, border=0)
+                    pdf.cell(0, 10, value, ln=True)
+                
+                # Add charts section
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 14)
+                pdf.cell(0, 10, "Financial Projections", ln=True, align='C')
+                pdf.ln(10)
+                
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 10, "Main Income Projection", ln=True)
+                pdf.image(graph_path, x=15, w=180)
+                
+                pdf.ln(10)
+                pdf.cell(0, 10, "Withdrawal Schedule", ln=True)
+                pdf.image(withdrawal_chart_path, x=15, w=180)
+
+                # Disclaimer Section
+                pdf.add_page()
+                pdf.set_font("Arial", 'I', 10)
+                pdf.multi_cell(0, 10, 
+                    "Disclaimer: This report is generated automatically and should be verified by a qualified financial advisor. "
+                    "All projections are estimates based on provided inputs and market assumptions. Past performance is not "
+                    "indicative of future results. BHJCF Studio is not liable for financial decisions made using this report."
+                )
+
+                # Finalize PDF
+                pdf_output = io.BytesIO()
+                pdf.output(pdf_output)
+                pdf_bytes = pdf_output.getvalue()
+
+                # Preview and return
+                embed_pdf_preview(pdf_bytes)
+                return pdf_bytes
+
+        except Exception as e:
+            st.error(f"PDF Generation Failed: {str(e)}")
+            logging.error(f"PDF Generation Error: {traceback.format_exc()}")
+            return None
+
+def generate_withdrawal_chart(withdrawals, retirement_age, tmpdir):
+    """Full implementation of withdrawal chart generation"""
     try:
-        # Generate chart
-        fig, ax = plt.subplots(figsize=(8, 5))
-        years = [retirement_age + i for i in range(len(withdrawals))]
-        ax.plot(years, withdrawals, color='#FF0000', linewidth=2.5)
-        ax.fill_between(years, withdrawals, color='#FFAA33', alpha=0.3)
-        ax.set_title("Annual Withdrawals", color='#FF5E00', fontsize=14)
-        ax.set_xlabel("Age", color='#228B22', fontsize=12)
-        ax.set_ylabel("Withdrawal Amount (R)", color='#FF5E00', fontsize=12)
-        ax.get_yaxis().set_major_formatter(
-            plt.FuncFormatter(lambda x, _: f"R{int(x):,}")
-        )
-        ax.grid(True, linestyle='--', alpha=0.7)
-        plt.tight_layout()
-
-        # Save as a temporary file
-        temp_file = NamedTemporaryFile(delete=False, suffix=".png")
-        chart_path = temp_file.name
-        plt.savefig(chart_path, dpi=300)
+        fig = plt.figure(figsize=(10, 6))
+        ax = fig.add_subplot(111)
+        
+        years = list(range(retirement_age, retirement_age + len(withdrawals)))
+        ax.bar(years, withdrawals, color=PRIMARY_COLOR, alpha=0.7)
+        
+        ax.set_title("Annual Withdrawal Schedule", color=SECONDARY_COLOR)
+        ax.set_xlabel("Age", color=SECONDARY_COLOR)
+        ax.set_ylabel("Withdrawal Amount (R)", color=SECONDARY_COLOR)
+        ax.grid(True, linestyle=':', alpha=0.5)
+        
+        chart_path = os.path.join(tmpdir, "withdrawals.png")
+        fig.savefig(chart_path, dpi=300, bbox_inches='tight')
         plt.close(fig)
-
+        
         return chart_path
-
+        
     except Exception as e:
-        log_and_display_error("Failed to generate the withdrawal chart.", e)
-        return None
+        logging.error(f"Withdrawal chart error: {str(e)}")
+        raise
 
 # ======================
 # PDF PREVIEW
 # ======================
-
 import base64
+
+def log_and_display_error(error_message, exception=None):
+    """
+    Logs an error and displays it to the user in Streamlit.
+    
+    Args:
+        error_message (str): The error message to display.
+        exception (Exception, optional): The exception object to log (if any).
+    """
+    logging.error(error_message)
+    if exception:
+        logging.exception(exception)
+    st.error(f"🚨 {error_message}")
+    if exception:
+        st.exception(exception)
 
 def display_pdf_preview(pdf_bytes):
     """
@@ -875,17 +1302,8 @@ def display_pdf_preview(pdf_bytes):
             </iframe>
         </div>
         """, unsafe_allow_html=True)
-
     except Exception as e:
         log_and_display_error("Failed to display the PDF preview.", e)
-
-# Example Usage (inside tabs or app flow)
-if 'rc_data' in st.session_state:  # Example for Retirement Calculator
-    if st.session_state.get('rc_pdf_bytes'):  # Check if PDF bytes exist
-        st.markdown("---")  # Add a divider for better UI
-        display_pdf_preview(st.session_state['rc_pdf_bytes'])
-    else:
-        st.info("No PDF generated yet. Please calculate and generate the PDF to view the preview.")
 
 # ======================
 # HELPER FUNCTIONS & UTILITIES
@@ -935,10 +1353,6 @@ if "la_data" not in st.session_state:
 
 if "rc_data" not in st.session_state:
     st.session_state.rc_data = {}
-
-# Debugging: Log the current session state
-import logging
-logging.info(f"Session State: {st.session_state}")
 
 # ======================
 # UTILITIES
@@ -1013,7 +1427,7 @@ def render_footer():
     st.markdown("""
     <hr>
     <p style="text-align: center; font-size: 14px; color: #555;">
-        Developed by <strong>BHJCF Studio</strong>. For assistance, contact support at <a href="mailto:support@bhjcfstudio.com">support@bhjcfstudio.com</a>.
+        Developed by <strong>BHJCF Studio</strong>. For assistance, contact support at <a href="mailto:brumbollharding@icloud.com">brumbollharding@icloud.com</a>.
     </p>
     <p style="text-align: center; font-size: 12px; color: #888;">
         © 2025 BHJCF Studio. All rights reserved.
@@ -1031,8 +1445,6 @@ render_footer()
 cleanup_temp_files()
 
 # Final Message
-
-# Final Message with consistent styling
 st.markdown("""
 <div style='border: 2px solid #4CAF50; 
             padding: 15px; 
@@ -1044,6 +1456,6 @@ st.markdown("""
             color: #1B5E20;'>
     ✅ Your Retirement Calculator is ready to use! 🎉
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 
 
 
