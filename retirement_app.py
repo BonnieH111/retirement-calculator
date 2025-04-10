@@ -24,7 +24,7 @@ import streamlit as st
 # APP CONFIGURATION
 # ======================
 
-# Set the page layout and title for the Streamlit app
+# Set the page layout and title for the Streamlit app (MUST BE FIRST STREAMLIT COMMAND)
 st.set_page_config(layout="wide", page_title="Retirement Calculator")
 
 # Custom CSS for styling the app
@@ -56,6 +56,22 @@ st.markdown("""
     margin-left: -25px !important;
     padding-left: 0 !important;
 }
+
+/* Additional styling for the app header */
+h1 { 
+    color: #00BFFF; 
+    font-size: 36px; 
+    font-weight: bold; 
+    text-align: center; 
+}
+
+/* Footer styling */
+.footer { 
+    text-align: center; 
+    font-size: 14px; 
+    color: #555; 
+    margin-top: 20px; 
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,7 +83,7 @@ st.markdown("""
 DEFAULT_LOGO_PATH = "attached_assets/IMG_0019.png"
 
 def get_logo_path():
-    """Find the path to the logo image."""
+    """Find the path to the logo image with a Base64 fallback."""
     logo_paths = [
         "static/bhjcf-logo.png", 
         "attached_assets/IMG_0019.png", 
@@ -84,8 +100,8 @@ def get_logo_path():
         if exists:
             return path
 
-    # If no valid path is found, return the default fallback path
-    return DEFAULT_LOGO_PATH
+    # Base64-encoded default logo fallback
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
 
 def get_logo_as_base64(logo_path):
     """Convert the logo to base64 for embedding in HTML/PDF."""
@@ -180,7 +196,7 @@ def generate_retirement_pdf(client_name, current_age, retirement_age, life_expec
     Returns:
         None: Displays the PDF preview in the Streamlit app.
     """
-    if st.button("📄 Generate PDF Report"):
+    with st.spinner("Generating PDF..."):
         try:
             # Create a new figure specifically for the PDF
             fig_pdf = plt.figure(figsize=(10, 6))
@@ -584,45 +600,6 @@ with tab1:
             )
 
 # ======================
-# APP CONFIGURATION
-# ======================
-
-# Set the page layout and title for the Streamlit app
-st.set_page_config(layout="wide", page_title="Retirement Calculator")
-
-# Custom CSS for styling the app
-st.markdown("""
-<style>
-/* Customize slider background color */
-.stSlider>div>div>div>div { 
-    background: #7FFF00 !important; 
-}
-
-/* Custom styling for highlighted text */
-.custom-r { 
-    color: #FF5E00 !important; 
-    font-size: 32px; 
-    font-weight: 900;
-    display: inline-block;
-    margin: 0 2px;
-}
-
-/* Styling for the logo column in the header */
-.logo-column { 
-    padding-right: 0px !important;
-    display: flex;
-    align-items: center;
-}
-
-/* Styling for the company name section */
-.company-name { 
-    margin-left: -25px !important;
-    padding-left: 0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ======================
 # SESSION STATE MANAGEMENT
 # ======================
 
@@ -952,9 +929,80 @@ def cleanup_temp_files():
 # SESSION STATE MANAGEMENT
 # ======================
 
-if 'initialized' not in st.session_state:
-    st.session_state['initialized'] = True
-    st.session_state['la_data'] = {}
+# Initialize session state variables if they don't exist
+if "la_data" not in st.session_state:
+    st.session_state.la_data = {}
+
+if "rc_data" not in st.session_state:
+    st.session_state.rc_data = {}
+
+# Debugging: Log the current session state
+import logging
+logging.info(f"Session State: {st.session_state}")
+
+# ======================
+# UTILITIES
+# ======================
+
+import os
+import base64
+from tempfile import NamedTemporaryFile
+from PIL import Image
+import io
+
+def get_logo_path():
+    """Find the path to the logo image."""
+    logo_paths = [
+        "static/bhjcf-logo.png", 
+        "attached_assets/IMG_0019.png", 
+        "bhjcf-logo.png",
+        "generated-icon.png"  # Added as last resort
+    ]
+
+    for path in logo_paths:
+        if os.path.exists(path):
+            return path
+    return "attached_assets/IMG_0019.png"  # Default fallback
+
+def get_logo_as_base64(logo_path):
+    """Convert the logo to base64 for embedding in HTML/PDF."""
+    try:
+        if logo_path and os.path.exists(logo_path):
+            with open(logo_path, "rb") as img_file:
+                return base64.b64encode(img_file.read()).decode('utf-8')
+    except Exception as e:
+        print(f"Error converting logo to Base64: {e}")
+    return None
+
+def save_temp_logo():
+    """Create a temporary file with the logo for safe use with FPDF."""
+    logo_path = get_logo_path()
+    if logo_path and os.path.exists(logo_path):
+        try:
+            temp_file = NamedTemporaryFile(delete=False, suffix=".png")
+            img = Image.open(logo_path)
+            img.save(temp_file.name)
+            temp_file.close()
+            return temp_file.name
+        except Exception as e:
+            print(f"Error saving temporary logo file: {e}")
+    return None
+
+def embed_pdf_preview(pdf_bytes):
+    """Display PDF preview in Streamlit."""
+    base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+    pdf_display = f'''
+    <div style="border: 2px solid #00BFFF; border-radius: 10px; padding: 20px; margin: 20px 0;">
+        <iframe src="data:application/pdf;base64,{base64_pdf}" 
+                width="100%" 
+                height="800px" 
+                style="border: none;">
+        </iframe>
+    </div>
+    '''
+    st.markdown(pdf_display, unsafe_allow_html=True)
+
+{}
 
 # ======================
 # FOOTER SECTION
@@ -996,6 +1044,6 @@ st.markdown("""
             color: #1B5E20;'>
     ✅ Your Retirement Calculator is ready to use! 🎉
 </div>
-""", unsafe_allow_html=True) 
+""", unsafe_allow_html=True)
 
 
