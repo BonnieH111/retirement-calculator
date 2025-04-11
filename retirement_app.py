@@ -574,5 +574,5 @@ with tab2:
 
             except Exception as e:
                 st.error(f"Error generating PDF: {str(e)}")
-                st.exception(e) 
+                st.exception(e)  
 
