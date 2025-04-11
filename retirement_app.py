@@ -1,277 +1,305 @@
-# retirement_app.py
-# ====================== IMPORTS ======================
+# ======================
+# IMPORTS
+# ======================
 import base64
 from tempfile import NamedTemporaryFile
 import matplotlib
 matplotlib.use('Agg')  # CRITICAL FOR STREAMLIT CLOUD
-
 import streamlit as st
 from numpy_financial import fv, pmt
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
 from PIL import Image
 from fpdf import FPDF
 import os
 import io
+import numpy as np
 
 # ======================
 # APP CONFIGURATION
 # ======================
-st.set_page_config(layout="wide", page_title="BHJCF Retirement Calculator")
-
-# ----------------------
-# CUSTOM CSS
-# ----------------------
-st.markdown("""
-<style>
-  .stSlider>div>div>div>div { background: #7FFF00 !important; }
-  .custom-r { color: #FF5E00 !important; font-size: 32px; font-weight: 900;
-              display: inline-block; margin: 0 2px; }
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="Retirement Planner", layout="wide")
 
 # ======================
-# LOGO & BRANDING
+# BRANDING CONFIGURATION
 # ======================
-def get_logo_path():
-    for p in ["static/bhjcf-logo.png","attached_assets/IMG_0019.png","bhjcf-logo.png"]:
-        if os.path.exists(p): return p
-    return None
+BRANDING = {
+    "company_name": "BHJCF Studio",
+    "tagline": "Plan Your Future with Confidence",
+    "logo_path": "static/bhjcf-logo.png",  # Update this to your logo path
+    "primary_color": "#00BFFF",
+    "secondary_color": "#FF5E00"
+}
 
-def get_logo_base64(path):
-    with open(path,"rb") as f: return base64.b64encode(f.read()).decode()
+def show_branding():
+    """Display the logo, company name, and tagline."""
+    col1, col2 = st.columns([1, 6])
+    with col1:
+        if os.path.exists(BRANDING["logo_path"]):
+            st.image(BRANDING["logo_path"], width=60)
+    with col2:
+        st.markdown(
+            f"<h2 style='color:{BRANDING['primary_color']}; margin-bottom:0;'>{BRANDING['company_name']}</h2>"
+            f"<p style='color:{BRANDING['secondary_color']}; margin-top:0;'>{BRANDING['tagline']}</p>",
+            unsafe_allow_html=True
+        )
 
-logo_path = get_logo_path()
-logo_b64  = get_logo_base64(logo_path) if logo_path else None
+# ======================
+# UTILITY FUNCTIONS
+# ======================
+def save_chart_to_image(fig):
+    """Convert a Matplotlib figure to an image buffer."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    return buf
 
-# Centered logo + company name
-col1,col2,col3 = st.columns([1,3,1])
-with col2:
-    if logo_b64:
-        st.markdown(f"""
-          <div style="display:flex;justify-content:center;align-items:center">
-            <img src="data:image/png;base64,{logo_b64}" width="60" style="margin-right:10px;">
-            <span style="font-size:24px;color:#00BFFF;font-weight:bold;">
-              BHJCF Studio
-            </span>
-          </div>
-        """,unsafe_allow_html=True)
-    else:
-        st.markdown('<h2 style="text-align:center;color:#00BFFF">BHJCF Studio</h2>',unsafe_allow_html=True)
+def calculate_final_value(pv, rate, nper):
+    """Calculate the future value of a present amount."""
+    return fv(rate, nper, 0, -pv)
 
-# App title
-st.markdown("""
-<h1 style='text-align: center; margin-bottom: 5px;'>
-  📊 <span class="custom-r">R</span>
-  <span style='font-size:32px;color:#00BFFF;'>Retirement Calculator</span>
+# ======================
+# PDF CLASS
+# ======================
+class CustomPDF(FPDF):
+    def header(self):
+        """Add a header to the PDF."""
+        self.set_font("Arial", "B", 12)
+        self.cell(0, 10, "Retirement Planning Report", ln=True, align="C")
+        self.ln(5)
+
+    def chapter_title(self, title):
+        """Add a chapter title to the PDF."""
+        self.set_font("Arial", "B", 12)
+        self.cell(0, 10, title, ln=True)
+        self.ln(5)
+
+    def chapter_body(self, body):
+        """Add body text to the PDF."""
+        self.set_font("Arial", "", 11)
+        self.multi_cell(0, 10, body)
+        self.ln()
+
+# ======================
+# APP HEADER
+# ======================
+show_branding()
+
+# App Title
+st.markdown(f"""
+<h1 style='text-align: center; margin-bottom: 20px;'>
+    📊 <span style="color:{BRANDING['secondary_color']};">Retirement Cash Flow Calculator</span>
 </h1>
 """, unsafe_allow_html=True)
 
-# Client watermark
-st.markdown('<p style="text-align:center;color:#FF0000;font-size:18px">Client: Juanita Moolman</p>',
-            unsafe_allow_html=True)
+# Client Watermark
+st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
-# REUSABLE PDF FUNCTION
+# CALCULATOR TABS 
 # ======================
-def create_pdf(client, details, key_figures, graph_png_path, title):
-    pdf = FPDF(orientation='P', format='A4')
-    pdf.set_auto_page_break(True, 15)
-    pdf.add_page()
-
-    # Logo & heading
-    pdf.set_font("Arial","B",16)
-    left_margin = 15
-    if logo_path:
-        pdf.image(logo_path, x=left_margin, y=10, w=20)
-        pdf.set_xy(left_margin+25,10)
-    else:
-        pdf.set_xy(left_margin,10)
-    pdf.cell(0,10, "BHJCF Studio", ln=1)
-    pdf.set_font("Arial","",12)
-    pdf.set_x(left_margin+25 if logo_path else left_margin)
-    pdf.cell(0,8, title, ln=1)
-    pdf.ln(5)
-    pdf.line(left_margin, pdf.get_y(), 210-left_margin, pdf.get_y())
-    pdf.ln(8)
-
-    # Client info
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,8,"Client Information",ln=1)
-    pdf.set_font("Arial","",11)
-    for k,v in details.items():
-        pdf.cell(60,8,f"{k}",0,0)
-        pdf.cell(0,8,f"{v}",0,1)
-    pdf.ln(5)
-
-    # Key figures
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,8,"Key Figures",ln=1)
-    pdf.set_font("Arial","",11)
-    for k,v in key_figures.items():
-        pdf.cell(0,8,f"{k} {v}",ln=1)
-    pdf.ln(5)
-
-    # Graph
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,8,title + " Projection",ln=1,'C')
-    pdf.image(graph_png_path, x=left_margin, w=180)
-    pdf.ln(5)
-
-    # Footer disclaimer
-    pdf.set_y(-30)
-    pdf.set_font("Arial","I",8)
-    pdf.set_text_color(128)
-    pdf.multi_cell(0,4,
-      "Disclaimer: Estimates based on provided inputs and assumptions. "
-      "Actual results may vary. Consult a financial advisor.",0,'L')
-
-    # Output to bytes
-    buf = io.BytesIO()
-    pdf.output(buf)
-    return buf.getvalue()
+tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulator"])
 
 # ======================
-# TABS
+# RETIREMENT CASH FLOW TAB
 # ======================
-tab1, tab2 = st.tabs(["💼 Retirement Cash Flow","📈 Living Annuity Simulator"])
-
-# --- TAB 1 ---
 with tab1:
-    # Inputs
-    current_age      = st.slider("Current Age",25,100,45)
-    retirement_age   = st.slider("Retirement Age",50,100,65)
-    retirement_savings = st.number_input("Current Savings (R)",500000)
-    annual_return    = st.slider("Annual Return (%)",1.0,15.0,7.0)/100
-    life_expectancy  = st.slider("Life Expectancy",70,120,85)
-    withdrawal_rate  = st.slider("Withdrawal Rate (%)",2.0,6.0,4.0)/100
+    current_age = st.slider("Current Age", 25, 100, 45)
+    retirement_age = st.slider("Retirement Age", 50, 100, 65)
+    retirement_savings = st.number_input("Current Savings (R)", value=500000)
+    annual_return = st.slider("Annual Return (%)", 1.0, 15.0, 7.0) / 100
+    life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
 
-    # Calc
-    yrs_to_retire = retirement_age - current_age
-    future_value  = fv(annual_return, yrs_to_retire, 0, -retirement_savings)
-    yrs_in_retire = life_expectancy - retirement_age
-    if yrs_in_retire<=0:
-        st.error("Life expectancy must exceed retirement age"); st.stop()
+    # Calculate future value at retirement
+    years_to_retirement = retirement_age - current_age
+    future_value = calculate_final_value(retirement_savings, annual_return, years_to_retirement)
+    years_in_retirement = life_expectancy - retirement_age
 
-    withdrawals = [future_value*withdrawal_rate*(1+annual_return)**i
-                   for i in range(yrs_in_retire)]
+    if years_in_retirement <= 0:
+        st.error("❌ Life expectancy must be GREATER than retirement age!")
+        st.stop()
 
-    # Display
+    withdrawals = [
+        future_value * withdrawal_rate * (1 + annual_return) ** year
+        for year in range(years_in_retirement)
+    ]
+
+    # Display Spending Plan
     st.subheader("Your Spending Plan")
-    st.markdown(f"- **Value at Retirement:** R{future_value:,.2f}")
-    st.markdown(f"- **1st Year Withdrawal:** R{withdrawals[0]:,.2f}")
+    st.markdown(f"""
+    <div style='margin: 20px 0;'>
+        <span style='font-size: 18px;'>At retirement value: </span>
+        <span style='color: {BRANDING['primary_color']}; font-weight: bold;'>R{future_value:,.2f}</span>
+    </div>
+    <div style='margin: 20px 0;'>
+        <span style='font-size: 18px;'>Annual withdrawal: </span>
+        <span style='color: {BRANDING['secondary_color']}; font-weight: bold;'>R{withdrawals[0]:,.2f}</span>
+        <span style='font-size: 14px; color: #666;'>(3% annual growth)</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Graph
-    fig,ax=plt.subplots(figsize=(8,4))
-    ax.plot(range(retirement_age,life_expectancy),withdrawals,color='red',lw=2)
-    ax.fill_between(range(retirement_age,life_expectancy),withdrawals,color='green',alpha=0.3)
-    ax.set_title("Retirement Income Projection")
-    ax.set_xlabel("Age"); ax.set_ylabel("Annual Income (R)")
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda x,p: f"{int(x):,}"))
-    plt.tight_layout()
+    # Generate Chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+    ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
+    ax.set_title("Retirement Income Projection", color=BRANDING['primary_color'], fontsize=14)
+    ax.set_xlabel("Age", fontsize=12)
+    ax.set_ylabel("Annual Income (R)", fontsize=12)
+    ax.grid(True, linestyle='--', alpha=0.7)
     st.pyplot(fig)
 
-    # PDF button
-    if st.button("📄 Download Retirement PDF"):
-        # save graph
-        with NamedTemporaryFile(delete=False, suffix=".png") as tmp:
-            fig.savefig(tmp.name,dpi=200)
-        details = {
-            "Client:": "Juanita Moolman",
-            "Current Age:": f"{current_age}",
-            "Retirement Age:": f"{retirement_age}",
-            "Life Expectancy:": f"{life_expectancy}"
-        }
-        key_figures = {
-            "Value at Retirement:": f"R{future_value:,.2f}",
-            "1st Year Withdrawal:": f"R{withdrawals[0]:,.2f}"
-        }
-        pdf_bytes = create_pdf(
-            client="Juanita",
-            details=details,
-            key_figures=key_figures,
-            graph_png_path=tmp.name,
-            title="Retirement Cash Flow"
-        )
-        # preview
-        b64 = base64.b64encode(pdf_bytes).decode()
-        st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="400px"></iframe>',unsafe_allow_html=True)
-        st.download_button("⬇️ Download PDF",pdf_bytes,"retirement_report.pdf","application/pdf")
+    # Generate PDF
+    if st.button("📄 Generate PDF Report"):
+        pdf = CustomPDF()
+        pdf.add_page()
+        pdf.chapter_title("Retirement Cash Flow Report")
+        pdf.chapter_body(f"Client: Juanita Moolman\n\nFuture Value: R{future_value:,.2f}\n"
+                         f"Initial Annual Withdrawal: R{withdrawals[0]:,.2f}")
+        buf = save_chart_to_image(fig)
+        pdf.image(buf, x=10, y=None, w=190)
+        pdf_output = io.BytesIO()
+        pdf.output(pdf_output)
+        st.download_button(
+            label="⬇️ Download PDF",
+            data=pdf_output.getvalue(),
+            file_name="retirement_cashflow_report.pdf",
+            mime="application/pdf"
+        ) 
 
-# --- TAB 2 ---
+# ======================
+# LIVING ANNUITY TAB (ENHANCED)
+# ======================
 with tab2:
-    la_current_age  = st.slider("Current Age",25,100,45,key="la1")
-    la_retirement_age = st.slider("Retirement Age",55,100,65,key="la2")
-    if la_retirement_age<=la_current_age:
-        st.error("Retirement age must be after current age"); st.stop()
-    investment      = st.number_input("Total Investment (R)",1_000_000,key="la3")
-    la_return       = st.slider("Annual Return (%)",1.0,20.0,7.0,key="la4")/100
-    withdrawal_rate_la = st.slider("Withdrawal Rate (%)",2.5,17.5,5.0,key="la5")/100
+    # Input fields for Living Annuity Simulator
+    col1, col2 = st.columns(2)
+    with col1:
+        la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
+    with col2:
+        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")  
 
-    if st.button("🚀 Calculate Living Annuity"):
-        # compute
-        monthly_income=investment*withdrawal_rate_la/12
-        balance=investment; yrs=0
-        yrs_list=[];bal_list=[];wd_list=[]
-        while balance>0 and yrs<50:
-            wd=balance*withdrawal_rate_la
-            wd_list.append(wd)
-            balance=(balance-wd)*(1+la_return)
-            yrs_list.append(la_retirement_age+yrs)
-            bal_list.append(balance)
-            yrs+=1
-        # longevity
-        msg = f"⚠️ Depleted at age {yrs_list[-1]}" if balance<=0 else f"✅ Sustainable beyond {yrs} years"
-        # display
-        st.subheader("Results")
-        st.write(f"- Monthly Income: **R{monthly_income:,.2f}**")
-        st.write(f"- {msg}")
+    if la_retirement_age <= la_current_age:
+        st.error("❌ Retirement age must be AFTER current age!")
+        st.stop()
 
-        # graphs
-        fig1,ax1=plt.subplots(figsize=(6,4))
-        ax1.plot(yrs_list,bal_list,color='green',lw=2)
-        ax1.fill_between(yrs_list,bal_list,color='lightgreen',alpha=0.3)
-        ax1.set_title("Balance Over Time");ax1.set_xlabel("Age");ax1.set_ylabel("Balance (R)")
-        ax1.yaxis.set_major_formatter(FuncFormatter(lambda x,p: f"{int(x):,}"))
-        plt.tight_layout()
-        st.pyplot(fig1)
+    investment = st.number_input("Total Investment (R)", value=5000000, key="la_invest")
+    la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return") / 100
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw") / 100
 
-        fig2,ax2=plt.subplots(figsize=(6,4))
-        ax2.plot(yrs_list,wd_list,color='orange',lw=2)
-        ax2.fill_between(yrs_list,wd_list,color='peachpuff',alpha=0.3)
-        ax2.set_title("Annual Withdrawals");ax2.set_xlabel("Age");ax2.set_ylabel("Withdrawal (R)")
-        ax2.yaxis.set_major_formatter(FuncFormatter(lambda x,p: f"{int(x):,}"))
-        plt.tight_layout()
-        st.pyplot(fig2)
+    # Button to calculate projections
+    calculate_btn = st.button("🚀 CALCULATE LIVING ANNUITY PROJECTIONS", key="la_btn")
 
-        # store for PDF
-        st.session_state.la = dict(
-          yrs=yrs_list,bal=bal_list,wd=wd_list,
-          mi=monthly_income,msg=msg,
-          invest=investment,ret=la_return,wr=withdrawal_rate_la,
-          age=la_current_age,rage=la_retirement_age
-        )
+    if calculate_btn:
+        monthly_income = investment * withdrawal_rate / 12
 
-    # PDF button (only after calculation)
-    if "la" in st.session_state:
-        if st.button("📄 Download Living Annuity PDF",key="la_pdf"):
-            data=st.session_state.la
-            # save graphs
-            tmp1=NamedTemporaryFile(delete=False,suffix=".png"); plt.figure(data=True)
-            fig1.savefig(tmp1.name,dpi=200); plt.close(fig1)
-            tmp2=NamedTemporaryFile(delete=False,suffix=".png"); fig2.savefig(tmp2.name,dpi=200); plt.close(fig2)
-            # build PDF
-            details_la = {
-              "Current Age:":f"{data['age']}",
-              "Retirement Age:":f"{data['rage']}",
-              "Investment:":f"R{data['invest']:,.2f}"
-            }
-            key_la = {
-              "Monthly Income:":f"R{data['mi']:,.2f}",
-              "Longevity:":data['msg']
-            }
-            pdfb = create_pdf("Juanita",details_la,key_la,tmp1.name,"Living Annuity")
-            b64=base64.b64encode(pdfb).decode()
-            st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="400px"></iframe>',unsafe_allow_html=True)
-            st.download_button("⬇️ Download PDF",pdfb,"living_annuity_report.pdf","application/pdf") 
+        # Simulation Logic
+        balance = investment
+        year_count = 0
+        depletion_years = []
+        balances = []
+        withdrawal_amounts = []
 
+        while balance > 0 and year_count < 50:
+            withdrawal = balance * withdrawal_rate
+            withdrawal_amounts.append(withdrawal)
+            balance = (balance - withdrawal) * (1 + la_return)
+            depletion_years.append(la_retirement_age + year_count)
+            balances.append(balance)
+            year_count += 1
+
+        # Longevity Assessment
+        if balance <= 0:
+            longevity_text = f"⚠️ Funds depleted after {year_count} years (age {la_retirement_age + year_count})"
+            longevity_color = "#FF0000"
+        else:
+            longevity_text = f"✅ Funds sustainable beyond {year_count} years"
+            longevity_color = "#00FF00"
+
+        # Display Results
+        st.markdown(f"""
+        <div style='margin: 20px 0;'>
+            <h3>Monthly Income</h3>
+            <p style='font-size: 24px; color: #00BFFF;'>R{monthly_income:,.2f}</p>
+            <p style='color: {longevity_color};'>{longevity_text}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Create and display graphs
+        col1, col2 = st.columns(2)
+
+        with col1:
+            fig1, ax1 = plt.subplots(figsize=(8, 5))
+            ax1.plot(depletion_years, balances, color='#228B22', linewidth=2.5)
+            ax1.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+            ax1.set_title("Investment Balance Timeline", color='#00BFFF', fontsize=14)
+            ax1.set_xlabel("Age", color='#228B22', fontsize=12)
+            ax1.set_ylabel("Remaining Balance (R)", color='#FF5E00', fontsize=12)
+            ax1.grid(True, linestyle='--', alpha=0.7)
+            st.pyplot(fig1)
+
+        with col2:
+            fig2, ax2 = plt.subplots(figsize=(8, 5))
+            ax2.plot(depletion_years, withdrawal_amounts, color='#FF0000', linewidth=2.5)
+            ax2.fill_between(depletion_years, withdrawal_amounts, color='#FFAA33', alpha=0.3)
+            ax2.set_title("Annual Withdrawal Amounts", color='#FF5E00', fontsize=14)
+            ax2.set_xlabel("Age", color='#228B22', fontsize=12)
+            ax2.set_ylabel("Withdrawal Amount (R)", color='#FF5E00', fontsize=12)
+            ax2.grid(True, linestyle='--', alpha=0.7)
+            st.pyplot(fig2)
+
+    # Check for data in session state to enable PDF button
+    if 'la_data' in st.session_state:
+        generate_pdf_btn = st.button("📄 Generate Living Annuity PDF Report", key="la_pdf_btn")
+        if generate_pdf_btn:
+            try:
+                st.info("Generating PDF report... please wait.")
+
+                # Retrieve data from session state
+                la_data = st.session_state.la_data
+                depletion_years = la_data['depletion_years']
+                balances = la_data['balances']
+                withdrawal_amounts = la_data['withdrawal_amounts']
+                monthly_income = la_data['monthly_income']
+                longevity_text = la_data['longevity_text']
+                investment = la_data['investment']
+                la_return = la_data['la_return']
+                withdrawal_rate = la_data['withdrawal_rate']
+                la_current_age = la_data['la_current_age']
+                la_retirement_age = la_data['la_retirement_age']
+                year_count = la_data['year_count']
+
+                # Create PDF
+                pdf = CustomPDF()
+                pdf.add_page()
+                pdf.chapter_title("Living Annuity Report")
+                pdf.chapter_body(f"""
+                Client: Juanita Moolman
+
+                Current Age: {la_current_age} years
+                Retirement Age: {la_retirement_age} years
+                Investment Amount: R{investment:,.2f}
+                Annual Return: {la_return * 100:.1f}%
+                Withdrawal Rate: {withdrawal_rate * 100:.1f}%
+
+                Monthly Income: R{monthly_income:,.2f}
+                Longevity Assessment: {longevity_text}
+                """)
+
+                # Add Balance Chart
+                buf1 = save_chart_to_image(fig1)
+                pdf.image(buf1, x=10, y=None, w=190)
+
+                # Add Withdrawal Chart
+                buf2 = save_chart_to_image(fig2)
+                pdf.image(buf2, x=10, y=None, w=190)
+
+                pdf_output = io.BytesIO()
+                pdf.output(pdf_output)
+                st.download_button(
+                    label="⬇️ Download Living Annuity PDF Report",
+                    data=pdf_output.getvalue(),
+                    file_name="living_annuity_report.pdf",
+                    mime="application/pdf"
+                )
+            except Exception as e:
+                st.error(f"Error generating PDF: {str(e)}")
+                st.exception(e) 
