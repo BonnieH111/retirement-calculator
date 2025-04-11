@@ -1,6 +1,6 @@
 # ======================
 # IMPORTS
-# ====================== 
+# ======================
 import base64
 from tempfile import NamedTemporaryFile
 import matplotlib
@@ -195,7 +195,7 @@ with tab1:
                 ["Initial Annual Withdrawal:", f"R{withdrawals[0]:,.2f}"]
             ]
 
-            pdf = generate_styled_pdf("Retirement Cash Flow Report", details, [fig]) # Assuming generate_styled_pdf is defined elsewhere
+            pdf = generate_styled_pdf("Retirement Cash Flow Report", details, [fig])
             pdf_output = io.BytesIO()
             pdf.output(pdf_output)
             pdf_output.seek(0)
@@ -314,37 +314,39 @@ with tab2:
             st.pyplot(fig2)
 
         if st.button("📄 Generate PDF Report", key="la_pdf_btn"):
-            try:
-                details = [
-                    ["Client:", "Juanita Moolman"],
-                    ["Current Age:", f"{la_current_age} years"],
-                    ["Retirement Age:", f"{la_retirement_age} years"],
-                    ["Investment Amount:", f"R{investment:,.2f}"],
-                    ["Annual Return:", f"{la_return * 100:.1f}%"],
-                    ["Withdrawal Rate:", f"{withdrawal_rate * 100:.1f}%"],
-                    ["Monthly Income:", f"R{monthly_income:,.2f}"],
-                    ["Longevity Assessment:", longevity_text.replace("⚠️", "[WARNING]").replace("✅", "[GOOD]")]
-                ]
+            if 'la_data' not in st.session_state:
+                st.error("Please calculate projections first!")
+            else:
+                try:
+                    details = [
+                        ["Client:", "Juanita Moolman"],
+                        ["Current Age:", f"{la_current_age} years"],
+                        ["Retirement Age:", f"{la_retirement_age} years"],
+                        ["Investment Amount:", f"R{investment:,.2f}"],
+                        ["Annual Return:", f"{la_return * 100:.1f}%"],
+                        ["Withdrawal Rate:", f"{withdrawal_rate * 100:.1f}%"],
+                        ["Monthly Income:", f"R{monthly_income:,.2f}"],
+                        ["Longevity Assessment:", longevity_text.replace("⚠️", "[WARNING]").replace("✅", "[GOOD]")]
+                    ]
 
-                pdf = generate_styled_pdf("Living Annuity Report", details, [fig1, fig2]) # Assuming generate_styled_pdf is defined elsewhere
-                pdf_output = io.BytesIO()
-                pdf.output(pdf_output)
-                pdf_output.seek(0)
+                    pdf = generate_styled_pdf("Living Annuity Report", details, [fig1, fig2])
+                    pdf_output = io.BytesIO()
+                    pdf.output(pdf_output)
+                    pdf_output.seek(0)
 
-                # Display preview
-                st.success("PDF generated successfully!")
-                display_pdf(pdf_output.getvalue())
+                    # Display preview
+                    st.success("PDF generated successfully!")
+                    display_pdf(pdf_output.getvalue())
 
-                # Download button
-                st.download_button(
-                    label="⬇️ Download Living Annuity PDF Report",
-                    data=pdf_output.getvalue(),
-                    file_name="living_annuity_report.pdf",
-                    mime="application/pdf"
-                )
-
-            except Exception as e:
-                st.error(f"Error generating PDF: {str(e)}")
+                    # Download button
+                    st.download_button(
+                        label="⬇️ Download Living Annuity PDF Report",
+                        data=pdf_output.getvalue(),
+                        file_name="living_annuity_report.pdf",
+                        mime="application/pdf"
+                    )
+                except Exception as e:
+                    st.error(f"Error generating PDF: {str(e)}")
 
 def generate_styled_pdf(title, details, figures):
     """Generates a styled PDF report."""
@@ -377,11 +379,11 @@ def generate_styled_pdf(title, details, figures):
             os.unlink(tmpfile.name)
         pdf.add_page()
 
-
     # Add disclaimer
     pdf.ln(10)
     pdf.set_font('Arial', 'I', 8)
     pdf.set_text_color(128)
     pdf.multi_cell(0, 4, "Disclaimer: This report is based on provided information and assumptions. Actual results may vary.", 0, 'L')
 
-    return pdf 
+    return pdf
+
