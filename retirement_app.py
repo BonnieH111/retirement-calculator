@@ -134,191 +134,191 @@ tab1, tab2 = st.tabs(["💼 Retirement Cash Flow", "📈 Living Annuity Simulato
 # RETIREMENT CASH FLOW TAB
 # ======================
 with tab1:
-current_age = st.slider("Current Age", 25, 100, 45)
-retirement_age = st.slider("Retirement Age", 50, 100, 65)
-retirement_savings = st.number_input("Current Savings (R)", value=500000)
-annual_return = st.slider("Annual Return (%)", 1.0, 15.0, 7.0) / 100
-life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
-withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
+    current_age = st.slider("Current Age", 25, 100, 45)
+    retirement_age = st.slider("Retirement Age", 50, 100, 65)
+    retirement_savings = st.number_input("Current Savings (R)", value=500000)
+    annual_return = st.slider("Annual Return (%)", 1.0, 15.0, 7.0) / 100
+    life_expectancy = st.slider("Life Expectancy", 70, 120, 85)
+    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.0, 6.0, 4.0) / 100
 
-years_to_retirement = retirement_age - current_age
-future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
-years_in_retirement = life_expectancy - retirement_age
+    years_to_retirement = retirement_age - current_age
+    future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
+    years_in_retirement = life_expectancy - retirement_age
 
-if years_in_retirement <= 0:
-st.error("❌ Life expectancy must be GREATER than retirement age!")
-st.stop()
+    if years_in_retirement <= 0:
+        st.error("❌ Life expectancy must be GREATER than retirement age!")
+        st.stop()
 
-withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year
-for year in range(years_in_retirement)]
+    withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year
+                   for year in range(years_in_retirement)]
 
-st.subheader("Your Spending Plan")
-st.markdown(f"""
-<div style='margin: 20px 0;'>
-<span class="custom-r">R</span>
-<span style='font-size: 18px;'>At retirement value: </span>
-<span style='color: #00BFFF; font-weight: bold;'>R{future_value:,.2f}</span>
-</div>
-<div style='margin: 20px 0;'>
-<span class="custom-r">R</span>
-<span style='font-size: 18px;'>Annual withdrawal: </span>
-<span style='color: #FF5E00; font-weight: bold;'>R{withdrawals[0]:,.2f}</span>
-<span style='font-size: 14px; color: #666;'>(3% annual growth)</span>
-</div>
-""", unsafe_allow_html=True)
+    st.subheader("Your Spending Plan")
+    st.markdown(f"""
+    <div style='margin: 20px 0;'>
+        <span class="custom-r">R</span>
+        <span style='font-size: 18px;'>At retirement value: </span>
+        <span style='color: #00BFFF; font-weight: bold;'>R{future_value:,.2f}</span>
+    </div>
+    <div style='margin: 20px 0;'>
+        <span class="custom-r">R</span>
+        <span style='font-size: 18px;'>Annual withdrawal: </span>
+        <span style='color: #FF5E00; font-weight: bold;'>R{withdrawals[0]:,.2f}</span>
+        <span style='font-size: 14px; color: #666;'>(3% annual growth)</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-fig, ax = plt.subplots(figsize=(10, 6)) # Adjusted height to prevent cutoff
-ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
-ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
-ax.set_title("Retirement Income Projection", color='#00BFFF', fontsize=14)
-ax.set_xlabel("Age", color='#228B22', fontsize=12)
-ax.set_ylabel("Annual Income (R)", color='#FF5E00', fontsize=12)
+    fig, ax = plt.subplots(figsize=(10, 6))  # Adjusted height to prevent cutoff
+    ax.plot(range(retirement_age, life_expectancy), withdrawals, color='#FF0000', linewidth=2)
+    ax.fill_between(range(retirement_age, life_expectancy), withdrawals, color='#7FFF00', alpha=0.3)
+    ax.set_title("Retirement Income Projection", color='#00BFFF', fontsize=14)
+    ax.set_xlabel("Age", color='#228B22', fontsize=12)
+    ax.set_ylabel("Annual Income (R)", color='#FF5E00', fontsize=12)
 
-# Add proper y-axis formatting for large numbers
-ax.get_yaxis().set_major_formatter(
-matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
-)
+    # Add proper y-axis formatting for large numbers
+    ax.get_yaxis().set_major_formatter(
+        matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
+    )
 
-plt.grid(True, linestyle='--', alpha=0.7)
-plt.tight_layout() # Ensures the graph fits properly
-st.pyplot(fig)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.tight_layout()  # Ensures the graph fits properly
+    st.pyplot(fig)
 
-# Generate PDF with preview (IMPROVED PORTRAIT A4)
-if st.button("📄 Generate PDF Report"):
-try:
-# Save graph to memory buffer with high DPI
-img_buf = io.BytesIO()
-fig.savefig(img_buf, format='png', dpi=300, bbox_inches='tight')
-img_buf.seek(0)
+    # Generate PDF with preview (IMPROVED PORTRAIT A4)
+    if st.button("📄 Generate PDF Report"):
+        try:
+            # Save graph to memory buffer with high DPI
+            img_buf = io.BytesIO()
+            fig.savefig(img_buf, format='png', dpi=300, bbox_inches='tight')
+            img_buf.seek(0)
 
-# Create PDF in portrait A4 format
-pdf = FPDF(orientation='P', format='A4')
-pdf.add_page()
-pdf.set_auto_page_break(auto=True, margin=15)
-pdf.set_font("Arial", 'B', 16)
-page_width = pdf.w
-left_margin = 15 # Unified left margin
-right_margin = 15 # Right margin
-usable_width = page_width - left_margin - right_margin
+            # Create PDF in portrait A4 format
+            pdf = FPDF(orientation='P', format='A4')
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=15)
+            pdf.set_font("Arial", 'B', 16)
+            page_width = pdf.w
+            left_margin = 15  # Unified left margin
+            right_margin = 15  # Right margin
+            usable_width = page_width - left_margin - right_margin
 
-# --- Header with Logo & Name ---
-logo_width = 25 # Reduced size
-company_name = "BHJCF Studio"
+            # --- Header with Logo & Name ---
+            logo_width = 25  # Reduced size
+            company_name = "BHJCF Studio"
 
-# Calculate centered position
-text_width = pdf.get_string_width(company_name)
-total_width = logo_width + text_width + 5 # 5mm gap
-x_start = (page_width - total_width) / 2
+            # Calculate centered position
+            text_width = pdf.get_string_width(company_name)
+            total_width = logo_width + text_width + 5  # 5mm gap
+            x_start = (page_width - total_width) / 2
 
-# Draw elements - only add logo if it exists
-if os.path.exists(logo_path):
-pdf.image(logo_path, x=x_start, y=15, w=logo_width)
+            # Draw elements - only add logo if it exists
+            if os.path.exists(logo_path):
+                pdf.image(logo_path, x=x_start, y=15, w=logo_width)
 
-pdf.set_xy(x_start + logo_width + 5, 17) # Vertically aligned
-pdf.cell(0, 10, company_name)
+            pdf.set_xy(x_start + logo_width + 5, 17)  # Vertically aligned
+            pdf.cell(0, 10, company_name)
 
-# --- Title with decorative underline ---
-pdf.set_font("Arial", 'B', 20)
-pdf.set_y(45) # Below header
-title = "Retirement Cash Flow Report"
-pdf.cell(0, 10, title, align='C')
+            # --- Title with decorative underline ---
+            pdf.set_font("Arial", 'B', 20)
+            pdf.set_y(45)  # Below header
+            title = "Retirement Cash Flow Report"
+            pdf.cell(0, 10, title, align='C')
 
-# Add decorative underline
-title_width = pdf.get_string_width(title)
-pdf.set_line_width(0.5)
-pdf.set_draw_color(0, 191, 255) # Light Blue
-pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
+            # Add decorative underline
+            title_width = pdf.get_string_width(title)
+            pdf.set_line_width(0.5)
+            pdf.set_draw_color(0, 191, 255)  # Light Blue
+            pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
 
-# --- Client Info ---
-pdf.set_font("Arial", 'B', 12)
-pdf.set_y(65)
-pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
+            # --- Client Info ---
+            pdf.set_font("Arial", 'B', 12)
+            pdf.set_y(65)
+            pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
 
-# --- Data Table with alternating colors ---
-pdf.set_y(80) # Below client info
-data = [
-("Current Age:", f"{current_age} years"),
-("Retirement Age:", f"{retirement_age} years"),
-("Current Savings:", f"R{retirement_savings:,.2f}"),
-("Annual Return:", f"{annual_return*100:.1f}%"),
-("Life Expectancy:", f"{life_expectancy} years"),
-("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
-("Projected Value at Retirement:", f"R{future_value:,.2f}"),
-("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
-]
+            # --- Data Table with alternating colors ---
+            pdf.set_y(80)  # Below client info
+            data = [
+                ("Current Age:", f"{current_age} years"),
+                ("Retirement Age:", f"{retirement_age} years"),
+                ("Current Savings:", f"R{retirement_savings:,.2f}"),
+                ("Annual Return:", f"{annual_return*100:.1f}%"),
+                ("Life Expectancy:", f"{life_expectancy} years"),
+                ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
+                ("Projected Value at Retirement:", f"R{future_value:,.2f}"),
+                ("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
+            ]
 
-# Create a professional table with alternating row colors
-col_width = usable_width / 2
-row_height = 10
+            # Create a professional table with alternating row colors
+            col_width = usable_width / 2
+            row_height = 10
 
-for i, (label, value) in enumerate(data):
-# Set background color for alternating rows
-if i % 2 == 0:
-pdf.set_fill_color(240, 240, 240) # Light gray
-else:
-pdf.set_fill_color(255, 255, 255) # White
+            for i, (label, value) in enumerate(data):
+                # Set background color for alternating rows
+                if i % 2 == 0:
+                    pdf.set_fill_color(240, 240, 240)  # Light gray
+                else:
+                    pdf.set_fill_color(255, 255, 255)  # White
 
-pdf.set_x(left_margin)
-pdf.set_font("Arial", 'B', 11)
-pdf.cell(col_width, row_height, label, 0, 0, 'L', True)
+                pdf.set_x(left_margin)
+                pdf.set_font("Arial", 'B', 11)
+                pdf.cell(col_width, row_height, label, 0, 0, 'L', True)
 
-pdf.set_font("Arial", '', 11)
-pdf.cell(col_width, row_height, value, 0, 1, 'R', True)
+                pdf.set_font("Arial", '', 11)
+                pdf.cell(col_width, row_height, value, 0, 1, 'R', True)
 
-# --- Graph ---
-graph_y = pdf.get_y() + 10
+            # --- Graph ---
+            graph_y = pdf.get_y() + 10
 
-# Add a title for the graph section
-pdf.set_font("Arial", 'B', 14)
-pdf.set_y(graph_y)
-pdf.cell(0, 10, "Retirement Income Projection", 0, 1, 'C')
-graph_y = pdf.get_y() + 5
+            # Add a title for the graph section
+            pdf.set_font("Arial", 'B', 14)
+            pdf.set_y(graph_y)
+            pdf.cell(0, 10, "Retirement Income Projection", 0, 1, 'C')
+            graph_y = pdf.get_y() + 5
 
-# Insert the graph image
-graph_width = usable_width # Full width within margins
-pdf.image(img_buf,
-x=left_margin,
-y=graph_y,
-w=graph_width)
+            # Insert the graph image
+            graph_width = usable_width  # Full width within margins
+            pdf.image(img_buf,
+                      x=left_margin,
+                      y=graph_y,
+                      w=graph_width)
 
-# Add explanatory note below graph
-pdf.set_y(graph_y + 85) # Position below graph
-pdf.set_font("Arial", 'I', 9)
-pdf.set_text_color(100, 100, 100) # Gray text
-pdf.multi_cell(0, 5, "This projection shows your expected annual income during retirement, adjusted for the specified annual return rate. The green shaded area represents your potential withdrawal amounts over time.", 0, 'L')
+            # Add explanatory note below graph
+            pdf.set_y(graph_y + 85)  # Position below graph
+            pdf.set_font("Arial", 'I', 9)
+            pdf.set_text_color(100, 100, 100)  # Gray text
+            pdf.multi_cell(0, 5, "This projection shows your expected annual income during retirement, adjusted for the specified annual return rate. The green shaded area represents your potential withdrawal amounts over time.", 0, 'L')
 
-# Add a disclaimer
-pdf.set_y(-40) # 40mm from bottom
-pdf.set_font("Arial", 'I', 8)
-pdf.set_text_color(150, 150, 150) # Light gray
-pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
+            # Add a disclaimer
+            pdf.set_y(-40)  # 40mm from bottom
+            pdf.set_font("Arial", 'I', 8)
+            pdf.set_text_color(150, 150, 150)  # Light gray
+            pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
 
-# Footer with page number and date
-pdf.set_y(-20)
-pdf.set_font("Arial", 'I', 8)
-pdf.set_text_color(0, 0, 0) # Black
-pdf.cell(0, 10, f"BHJCF Studio Retirement Calculator | Page {pdf.page_no()}", 0, 0, 'C')
+            # Footer with page number and date
+            pdf.set_y(-20)
+            pdf.set_font("Arial", 'I', 8)
+            pdf.set_text_color(0, 0, 0)  # Black
+            pdf.cell(0, 10, f"BHJCF Studio Retirement Calculator | Page {pdf.page_no()}", 0, 0, 'C')
 
-# Save PDF to memory
-pdf_output = io.BytesIO()
-pdf.output(pdf_output)
-pdf_data = pdf_output.getvalue()
+            # Save PDF to memory
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            pdf_data = pdf_output.getvalue()
 
-# Create columns for success message and download button
-col1, col2 = st.columns([1, 1])
-with col1:
-st.success("PDF generated successfully!")
-with col2:
-# Download button
-st.download_button(
-label="⬇️ Download PDF Report",
-data=pdf_data,
-file_name="Juanita_Retirement_Report.pdf",
-mime="application/pdf",
-help="Click to download your PDF report"
-)
-except Exception as e:
-st.error(f"❌ PDF generation failed: {str(e)}")
+            # Create columns for success message and download button
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.success("PDF generated successfully!")
+            with col2:
+                # Download button
+                st.download_button(
+                    label="⬇️ Download PDF Report",
+                    data=pdf_data,
+                    file_name="Juanita_Retirement_Report.pdf",
+                    mime="application/pdf",
+                    help="Click to download your PDF report"
+                )
+        except Exception as e:
+            st.error(f"❌ PDF generation failed: {str(e)}")
 
 # ======================
 # LIVING ANNUITY TAB (ENHANCED)
@@ -675,5 +675,5 @@ help="Click to download your detailed Living Annuity PDF report"
 )
 except Exception as e:
 st.error(f"❌ PDF generation failed: {str(e)}")
-st.error(f"Details: {type(e).__name__}") 
+st.error(f"Details: {type(e).__name__}")
 
