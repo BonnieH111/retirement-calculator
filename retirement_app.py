@@ -40,6 +40,11 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 # ======================
+# TAB DEFINITIONS
+# ======================
+tab1, tab2 = st.tabs(["Retirement Cash Flow", "Living Annuity"])
+
+# ======================
 # BRANDING & LOGO FUNCTIONS
 # ======================
 def get_logo_path():
@@ -509,5 +514,5 @@ with tab2:
                     )
             except Exception as e:
                 st.error(f"❌ PDF generation failed: {str(e)}")
-                st.error(f"Details: {type(e).__name__}")
+                st.error(f"Details: {type(e).__name__}") 
 
