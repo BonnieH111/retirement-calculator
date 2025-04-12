@@ -1,4 +1,3 @@
-# retirement_app.py
 # ====================== IMPORTS ======================
 import base64
 from tempfile import NamedTemporaryFile
@@ -44,23 +43,48 @@ padding-left: 0 !important;
 # BRANDING & LOGO FUNCTIONS
 # ======================
 def get_logo_path():
-"""Find the path to the logo image."""
-logo_paths = ["static/bhjcf-logo.png", "attached_assets/IMG_0019.png", "bhjcf-logo.png"]
-for path in logo_paths:
-if os.path.exists(path):
-return path
-return None
+    """Find the path to the logo image."""
+    logo_paths = [
+        "static/bhjcf-logo.png", 
+        "attached_assets/IMG_0019.png", 
+        "bhjcf-logo.png",
+        "generated-icon.png"  # Added as last resort
+    ]
+
+    for path in logo_paths:
+        if os.path.exists(path):
+            return path
+    return None
 
 def get_logo_as_base64(logo_path):
-"""Convert the logo to base64 for embedding in HTML/PDF."""
-with open(logo_path, "rb") as img_file:
-return base64.b64encode(img_file.read()).decode('utf-8')
+    """Convert the logo to base64 for embedding in HTML/PDF."""
+    try:
+        if logo_path and os.path.exists(logo_path):
+            with open(logo_path, "rb") as img_file:
+                return base64.b64encode(img_file.read()).decode('utf-8')
+    except Exception:
+        pass
+    return None
+
+def save_temp_logo():
+    """Create a temporary file with the logo for FPDF to use safely."""
+    logo_path = get_logo_path()
+    if logo_path and os.path.exists(logo_path):
+        try:
+            temp_file = NamedTemporaryFile(delete=False, suffix=".png")
+            img = Image.open(logo_path)
+            img.save(temp_file.name)
+            temp_file.close()
+            return temp_file.name
+        except Exception:
+            pass
+    return None
 
 # Get logo path
 logo_path = get_logo_path()
 if not logo_path:
-st.error("⚠️ Logo not found in any of the expected locations")
-logo_path = "attached_assets/IMG_0019.png" # Default to this if it exists
+    st.error("⚠️ Logo not found in any of the expected locations")
+    logo_path = None
 
 # ======================
 # APP HEADER
@@ -68,34 +92,33 @@ logo_path = "attached_assets/IMG_0019.png" # Default to this if it exists
 # Centered Logo and Company Name on the Same Line
 col1, col2, col3 = st.columns([1, 3, 1])
 with col2:
-# Only try to load and display logo if the file exists
-if os.path.exists(logo_path):
-try:
-logo_base64 = get_logo_as_base64(logo_path)
-st.markdown(f"""
-<div style='display: flex; justify-content: center; align-items: center;'>
-<img src="data:image/png;base64,{logo_base64}" width="65" style='margin-right: 10px;'>
-<p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
-BHJCF Studio
-</p>
-</div>
-""", unsafe_allow_html=True)
-except Exception as e:
-st.error(f"Error displaying logo: {str(e)}")
-else:
-st.markdown(f"""
-<div style='display: flex; justify-content: center; align-items: center;'>
-<p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
-BHJCF Studio
-</p>
-</div>
-""", unsafe_allow_html=True)
+    if logo_path:
+        try:
+            logo_base64 = get_logo_as_base64(logo_path)
+            st.markdown(f"""
+            <div style='display: flex; justify-content: center; align-items: center;'>
+                <img src="data:image/png;base64,{logo_base64}" width="65" style='margin-right: 10px;'>
+                <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+                    BHJCF Studio
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error displaying logo: {str(e)}")
+    else:
+        st.markdown(f"""
+        <div style='display: flex; justify-content: center; align-items: center;'>
+            <p style='color: #00BFFF; font-size:24px; font-weight: bold; margin: 0;'>
+                BHJCF Studio
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # App Title with Custom Styling
 st.markdown("""
 <h1 style='text-align: center; margin-bottom: 20px;'>
-📊 <span class="custom-r">R</span>
-<span style='font-size: 32px; color: #00BFFF;'>Retirement Cash Flow Calculator</span>
+    📊 <span class="custom-r">R</span>
+    <span style='font-size: 32px; color: #00BFFF;'>Retirement Cash Flow Calculator</span>
 </h1>
 """, unsafe_allow_html=True)
 
