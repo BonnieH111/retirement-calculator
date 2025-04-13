@@ -40,34 +40,7 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 # ======================
-# TAB DEFINITIONS
-# ======================
-tab1, tab2 = st.tabs(["Retirement Cash Flow", "Living Annuity"])
-
-# ======================
-# BRANDING & LOGO FUNCTIONS
-# ======================
-def get_logo_path():
-    """Find the path to the logo image."""
-    logo_paths = ["static/bhjcf-logo.png", "attached_assets/IMG_0019.png", "bhjcf-logo.png"]
-    for path in logo_paths:
-        if os.path.exists(path):
-            return path
-    return None
-
-def get_logo_as_base64(logo_path):
-    """Convert the logo to base64 for embedding in HTML/PDF."""
-    with open(logo_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode('utf-8')
-
-# Get logo path
-logo_path = get_logo_path()
-if not logo_path:
-    st.error("⚠️ Logo not found in any of the expected locations")
-    logo_path = "attached_assets/IMG_0019.png"  # Default to this if it exists
-
-# ======================
-# APP HEADER
+# APP HEADER (MOVED TO TOP)
 # ======================
 # Centered Logo and Company Name on the Same Line
 col1, col2, col3 = st.columns([1, 3, 1])
@@ -107,7 +80,34 @@ st.markdown("""
 st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Client: Juanita Moolman</p>', unsafe_allow_html=True)
 
 # ======================
-# RETIREMENT CASH FLOW TAB
+# TAB DEFINITIONS
+# ======================
+tab1, tab2 = st.tabs(["Retirement Cash Flow", "Living Annuity"])
+
+# ======================
+# BRANDING & LOGO FUNCTIONS
+# ======================
+def get_logo_path():
+    """Find the path to the logo image."""
+    logo_paths = ["static/bhjcf-logo.png", "attached_assets/IMG_0019.png", "bhjcf-logo.png"]
+    for path in logo_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+def get_logo_as_base64(logo_path):
+    """Convert the logo to base64 for embedding in HTML/PDF."""
+    with open(logo_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode('utf-8')
+
+# Get logo path
+logo_path = get_logo_path()
+if not logo_path:
+    st.error("⚠️ Logo not found in any of the expected locations")
+    logo_path = "attached_assets/IMG_0019.png"  # Default to this if it exists
+
+# ======================
+# RETIREMENT CASH FLOW TAB (UPDATED)
 # ======================
 with tab1:
     current_age = st.slider("Current Age", 25, 100, 45)
@@ -159,8 +159,42 @@ with tab1:
     plt.tight_layout()  # Ensures the graph fits properly
     st.pyplot(fig)
 
+    # Add PDF generation button for Cash Flow tab
+    if st.button("📄 Generate Cash Flow PDF Report", key="cf_pdf_btn"):
+        try:
+            # Save graph to memory buffer
+            graph_buf = io.BytesIO()
+            fig.savefig(graph_buf, format='png', dpi=300, bbox_inches='tight')
+            graph_buf.seek(0)
+
+            # Create PDF
+            pdf = FPDF(orientation='P', format='A4')
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, "Retirement Cash Flow Report", 0, 1, 'C')
+            pdf.image(graph_buf, x=15, y=30, w=180)
+            pdf.set_y(120)
+            pdf.set_font("Arial", '', 10)
+            pdf.multi_cell(0, 5, "This report shows your projected retirement cash flow based on the provided inputs.", 0, 'L')
+
+            # Save PDF to memory
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            pdf_data = pdf_output.getvalue()
+
+            # Download button
+            st.download_button(
+                label="⬇️ Download Cash Flow Report",
+                data=pdf_data,
+                file_name="Juanita_Cash_Flow_Report.pdf",
+                mime="application/pdf",
+                help="Click to download your detailed Cash Flow PDF report"
+            )
+        except Exception as e:
+            st.error(f"❌ PDF generation failed: {str(e)}")
+
 # ======================
-# LIVING ANNUITY TAB (ENHANCED)
+# LIVING ANNUITY TAB (ENHANCED & FIXED)
 # ======================
 with tab2:
     col1, col2 = st.columns(2)
@@ -296,8 +330,11 @@ with tab2:
             'year_count': year_count
         }
 
-        # Generate PDF button placed directly in the annuity section
-        if st.button("📄 Generate Living Annuity PDF Report", key="la_pdf_btn"):
+    # Add PDF generation button (always visible)
+    if st.button("📄 Generate Living Annuity PDF Report", key="la_pdf_btn"):
+        if 'la_data' not in st.session_state:
+            st.error("❌ Please calculate projections first!")
+        else:
             try:
                 # Save both graphs to memory buffers with high DPI
                 balance_buf = io.BytesIO()
@@ -307,8 +344,8 @@ with tab2:
                 # Balance chart
                 fig_balance = plt.figure(figsize=(10, 6))
                 ax_balance = fig_balance.add_subplot(111)
-                ax_balance.plot(depletion_years, balances, color='#228B22', linewidth=2.5)
-                ax_balance.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
+                ax_balance.plot(st.session_state.la_data['depletion_years'], st.session_state.la_data['balances'], color='#228B22', linewidth=2.5)
+                ax_balance.fill_between(st.session_state.la_data['depletion_years'], st.session_state.la_data['balances'], color='#7FFF00', alpha=0.3)
                 ax_balance.set_title("Investment Balance Timeline", color='#00BFFF', fontsize=14)
                 ax_balance.set_xlabel("Age", color='#228B22', fontsize=12)
                 ax_balance.set_ylabel("Remaining Balance (R)", color='#FF5E00', fontsize=12)
@@ -323,8 +360,8 @@ with tab2:
                 # Withdrawal chart
                 fig_withdrawal = plt.figure(figsize=(10, 6))
                 ax_withdrawal = fig_withdrawal.add_subplot(111)
-                ax_withdrawal.plot(depletion_years, withdrawal_amounts, color='#FF0000', linewidth=2.5)
-                ax_withdrawal.fill_between(depletion_years, withdrawal_amounts, color='#FFAA33', alpha=0.3)
+                ax_withdrawal.plot(st.session_state.la_data['depletion_years'], st.session_state.la_data['withdrawal_amounts'], color='#FF0000', linewidth=2.5)
+                ax_withdrawal.fill_between(st.session_state.la_data['depletion_years'], st.session_state.la_data['withdrawal_amounts'], color='#FFAA33', alpha=0.3)
                 ax_withdrawal.set_title("Annual Withdrawal Amounts", color='#FF5E00', fontsize=14)
                 ax_withdrawal.set_xlabel("Age", color='#228B22', fontsize=12)
                 ax_withdrawal.set_ylabel("Withdrawal Amount (R)", color='#FF0000', fontsize=12)
@@ -383,14 +420,14 @@ with tab2:
                 # --- Data Table with alternating colors ---
                 pdf.set_y(80)  # Below client info
                 data = [
-                    ("Current Age:", f"{la_current_age} years"),
-                    ("Retirement Age:", f"{la_retirement_age} years"),
-                    ("Total Investment:", f"R{investment:,.2f}"),
-                    ("Annual Return:", f"{la_return*100:.1f}%"),
-                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
-                    ("Monthly Income:", f"R{monthly_income:,.2f}"),
-                    ("Longevity:", f"{year_count} years"),
-                    ("Status:", f"{longevity_text.replace('✅', '').replace('⚠️', '')}")
+                    ("Current Age:", f"{st.session_state.la_data['la_current_age']} years"),
+                    ("Retirement Age:", f"{st.session_state.la_data['la_retirement_age']} years"),
+                    ("Total Investment:", f"R{st.session_state.la_data['investment']:,.2f}"),
+                    ("Annual Return:", f"{st.session_state.la_data['la_return']*100:.1f}%"),
+                    ("Withdrawal Rate:", f"{st.session_state.la_data['withdrawal_rate']*100:.1f}%"),
+                    ("Monthly Income:", f"R{st.session_state.la_data['monthly_income']:,.2f}"),
+                    ("Longevity:", f"{st.session_state.la_data['year_count']} years"),
+                    ("Status:", f"{st.session_state.la_data['longevity_text']}")
                 ]
 
                 # Create a professional table with alternating row colors
@@ -499,20 +536,14 @@ with tab2:
                 pdf.output(pdf_output)
                 pdf_data = pdf_output.getvalue()
 
-                # Create columns for success message and download button
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    st.success("Living Annuity PDF generated successfully!")
-                with col2:
-                    # Download button
-                    st.download_button(
-                        label="⬇️ Download Living Annuity Report",
-                        data=pdf_data,
-                        file_name="Juanita_Living_Annuity_Report.pdf",
-                        mime="application/pdf",
-                        help="Click to download your detailed Living Annuity PDF report"
-                    )
+                # Download button
+                st.download_button(
+                    label="⬇️ Download Living Annuity Report",
+                    data=pdf_data,
+                    file_name="Juanita_Living_Annuity_Report.pdf",
+                    mime="application/pdf",
+                    help="Click to download your detailed Living Annuity PDF report"
+                )
             except Exception as e:
-                st.error(f"❌ PDF generation failed: {str(e)}")
-                st.error(f"Details: {type(e).__name__}") 
+                st.error(f"❌ PDF generation failed: {str(e)}") 
 
