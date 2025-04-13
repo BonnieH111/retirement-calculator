@@ -40,7 +40,29 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 # ======================
-# APP HEADER (MOVED TO TOP)
+# BRANDING & LOGO FUNCTIONS
+# ======================
+def get_logo_path():
+    """Find the path to the logo image."""
+    logo_paths = ["static/bhjcf-logo.png", "attached_assets/IMG_0019.png", "bhjcf-logo.png"]
+    for path in logo_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+def get_logo_as_base64(logo_path):
+    """Convert the logo to base64 for embedding in HTML/PDF."""
+    with open(logo_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode('utf-8')
+
+# Get logo path
+logo_path = get_logo_path()
+if not logo_path:
+    st.error("⚠️ Logo not found in any of the expected locations")
+    logo_path = "attached_assets/IMG_0019.png"  # Default to this if it exists
+
+# ======================
+# APP HEADER
 # ======================
 # Centered Logo and Company Name on the Same Line
 col1, col2, col3 = st.columns([1, 3, 1])
@@ -83,28 +105,6 @@ st.markdown('<p style="color:#FF0000; font-size:20px; text-align: center;">Clien
 # TAB DEFINITIONS
 # ======================
 tab1, tab2 = st.tabs(["Retirement Cash Flow", "Living Annuity"])
-
-# ======================
-# BRANDING & LOGO FUNCTIONS
-# ======================
-def get_logo_path():
-    """Find the path to the logo image."""
-    logo_paths = ["static/bhjcf-logo.png", "attached_assets/IMG_0019.png", "bhjcf-logo.png"]
-    for path in logo_paths:
-        if os.path.exists(path):
-            return path
-    return None
-
-def get_logo_as_base64(logo_path):
-    """Convert the logo to base64 for embedding in HTML/PDF."""
-    with open(logo_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode('utf-8')
-
-# Get logo path
-logo_path = get_logo_path()
-if not logo_path:
-    st.error("⚠️ Logo not found in any of the expected locations")
-    logo_path = "attached_assets/IMG_0019.png"  # Default to this if it exists
 
 # ======================
 # RETIREMENT CASH FLOW TAB (UPDATED)
@@ -545,5 +545,5 @@ with tab2:
                     help="Click to download your detailed Living Annuity PDF report"
                 )
             except Exception as e:
-                st.error(f"❌ PDF generation failed: {str(e)}") 
+                st.error(f"❌ PDF generation failed: {str(e)}")
 
