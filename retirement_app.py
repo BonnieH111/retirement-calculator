@@ -183,184 +183,267 @@ with tab1:
     # Display the graph in the Streamlit app
     st.image(graph_buf, caption='Projected Cash Flow', use_column_width=True)
 
-    # Add PDF generation button for Cash Flow tab
-    if st.button("📄 Generate Cash Flow PDF Report", key="cf_pdf_btn"):
-        try:
-            # Create PDF
-            pdf = FPDF(orientation='P', format='A4')
-            pdf.add_page()
+## ====================== CASH FLOW PDF GENERATION ======================
+if st.button("📄 Generate Cash Flow PDF Report", key="cf_pdf_btn"):
+    try:
+        # Initialize PDF
+        pdf = FPDF(orientation='P', format='A4')
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
 
-            # Set font for the entire PDF
-            pdf.set_font("Arial", 'B', 16)
-
-            # Add title to the PDF
-            pdf.cell(0, 10, "Retirement Cash Flow Report", ln=True, align='C')
-
-            # Add user input values to the PDF
-            pdf.set_font("Arial", '', 12)
-            pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True)
-            pdf.cell(0, 10, f"Current Age: {current_age} years", ln=True)
-            pdf.cell(0, 10, f"Retirement Age: {retirement_age} years", ln=True)
-            pdf.cell(0, 10, f"Total Savings: R{retirement_savings:,.2f}", ln=True)
-            pdf.cell(0, 10, f"Annual Return: {annual_return * 100:.1f}%", ln=True)
-            pdf.cell(0, 10, f"Life Expectancy: {life_expectancy} years", ln=True)
-            pdf.cell(0, 10, f"Withdrawal Rate: {withdrawal_rate * 100:.1f}%", ln=True)
-
-            # Save the graph image to a new page in the PDF
-            pdf.add_page()
-            pdf.cell(0, 10, "Projected Cash Flow Graph", ln=True, align='C')
-            pdf.image(graph_buf, x=10, w=pdf.w - 20)  # Adjust the width and position
-
-            # Save PDF to memory
-            pdf_output = io.BytesIO()
-            pdf.output(pdf_output)
-            pdf_data = pdf_output.getvalue()
-
-            # Download button for PDF report
-            st.download_button(
-                label="📥 Download Cash Flow PDF Report",
-                data=pdf_data,
-                file_name="Retirement_Cash_Flow_Report.pdf",
-                mime="application/pdf"
-            )
-
-            st.success("PDF generated successfully!")
+        # ---- Header with Logo ----
+        if os.path.exists(logo_path):
+            pdf.image(logo_path, x=10, y=8, w=25)
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "BHJCF Studio", ln=True, align='C')
         
-        except Exception as e:
-            st.error(f"❌ An error occurred while generating the PDF: {str(e)}")
+        # ---- Title Section ----
+        pdf.set_font("Arial", 'B', 20)
+        pdf.cell(0, 15, "Retirement Cash Flow Report", ln=True, align='C')
+        pdf.set_font("Arial", 'I', 10)
+        pdf.cell(0, 10, f"Generated: {time.strftime('%Y-%m-%d')}", ln=True, align='C')
+        pdf.ln(10)
 
-# ====================== LIVING ANNUITY TAB (FINAL TESTED VERSION) ======================
+        # ---- Client Information ----
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(0, 10, "Client: Juanita Moolman", ln=True)
+        pdf.ln(5)
+
+        # ---- Data Display ----
+        pdf.set_font("Arial", '', 12)
+        col_width = pdf.w / 3
+        data_rows = [
+            ("Current Age:", f"{current_age} years"),
+            ("Retirement Age:", f"{retirement_age} years"),
+            ("Current Savings:", f"R{retirement_savings:,.2f}"),
+            ("Annual Return:", f"{annual_return*100:.1f}%"),
+            ("Life Expectancy:", f"{life_expectancy} years"),
+            ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
+            ("Projected Balance:", f"R{future_value:,.2f}"),
+            ("First Year Withdrawal:", f"R{withdrawals[0]:,.2f}")
+        ]
+        
+        for label, value in data_rows:
+            pdf.cell(col_width, 10, label)
+            pdf.cell(0, 10, value, ln=True)
+
+        # ---- Graph Page ----
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "Projected Cash Flow", ln=True, align='C')
+        pdf.image(graph_buf, x=10, y=25, w=pdf.w-20)
+
+        # ---- Footer ----
+        pdf.set_y(-15)
+        pdf.set_font("Arial", 'I', 8)
+        pdf.cell(0, 10, f"Page {pdf.page_no()}", 0, 0, 'C')
+
+        # Generate download
+        pdf_output = pdf.output(dest='S').encode('latin1')
+        st.download_button(
+            label="📥 Download Full Report",
+            data=pdf_output,
+            file_name=f"Cash_Flow_Report_{time.strftime('%Y%m%d')}.pdf",
+            mime="application/pdf"
+        )
+        st.success("✅ PDF generated with professional styling!")
+    
+    except Exception as e:
+        st.error(f"❌ PDF generation failed: {str(e)}")
+
+# 🆕 TOGGLE FOR GRAPH VISIBILITY (NEW)
+if st.checkbox("📊 Display Interactive Graph", True, key="graph_toggle"):
+    st.image(graph_buf, caption='Projected Cash Flow', use_container_width=True)
+
+# ====================== LIVING ANNUITY SIMULATOR ======================
 with tab2:
-    col1, col2 = st.columns(2)
-    with col1:
-        la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
-    with col2:
-        la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")
+    # -------------------- USER INPUT PANEL --------------------
+    with st.container(border=True):
+        st.subheader("🧮 Simulation Parameters")
+        col1, col2 = st.columns(2)
+        with col1:
+            la_current_age = st.slider("Current Age", 25, 100, 45, key="la_age")
+        with col2:
+            la_retirement_age = st.slider("Retirement Age", 55, 100, 65, key="la_retire")
 
-    if la_retirement_age <= la_current_age:
-        st.error("❌ Retirement age must be AFTER current age!")
-        st.stop()
+        if la_retirement_age <= la_current_age:
+            st.error("❌ Retirement age must be AFTER current age!")
+            st.stop()
 
-    investment = st.number_input("Total Investment (R)", value=5000000, key="la_invest")
-    la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return") / 100
-    withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw") / 100
+        investment = st.number_input("Total Investment (R)", value=5000000, key="la_invest")
+        la_return = st.slider("Annual Return (%)", 1.0, 20.0, 7.0, key="la_return") / 100
+        withdrawal_rate = st.slider("Withdrawal Rate (%)", 2.5, 17.5, 4.0, key="la_withdraw") / 100
 
-    calculate_btn = st.button("🚀 CALCULATE LIVING ANNUITY PROJECTIONS", key="la_btn")
+        calculate_btn = st.button("🚀 CALCULATE PROJECTIONS", key="la_btn", type="primary")
 
+    # -------------------- CORE CALCULATION ENGINE --------------------
     if calculate_btn:
-        monthly_income = investment * withdrawal_rate / 12
+        with st.status("⚙️ Running simulation...", expanded=True) as status:
+            monthly_income = investment * withdrawal_rate / 12
+            
+            balance = investment
+            year_count = 0
+            balances = []
+            withdrawal_amounts = []
+            
+            while balance > 0 and year_count < 50:
+                withdrawal = balance * withdrawal_rate
+                withdrawal_amounts.append(withdrawal)
+                balance = (balance - withdrawal) * (1 + la_return)
+                balances.append(balance)
+                year_count += 1
+            
+            longevity_status = "🟢 Sustainable beyond age 95" if year_count >=50 else f"🔴 Depletes at age {la_retirement_age+year_count}"
+            status.update(label=f"✅ Simulation complete! {longevity_status}", state="complete")
 
-        # Simulation
-        balance = investment
-        year_count = 0
-        depletion_years = []
-        balances = []
-        withdrawal_amounts = []
-
-        while balance > 0 and year_count < 50:
-            withdrawal = balance * withdrawal_rate
-            withdrawal_amounts.append(withdrawal)
-            balance = (balance - withdrawal) * (1 + la_return)
-            depletion_years.append(la_retirement_age + year_count)
-            balances.append(balance)
-            year_count += 1
-
-        # Store results in session state
-        st.session_state.la_data = {
-            'la_current_age': la_current_age,
-            'la_retirement_age': la_retirement_age,
-            'investment': investment,
-            'la_return': la_return,
-            'withdrawal_rate': withdrawal_rate,
-            'monthly_income': monthly_income,
-            'year_count': year_count,
-            'longevity_text': longevity_text,
-            'balances': balances,
-            'withdrawal_amounts': withdrawal_amounts,
-            'depletion_years': depletion_years
-        }
-
-        # Generate graph buffers
-        balance_buf = io.BytesIO()
-        ax1.figure.savefig(balance_buf, format='png', dpi=150)
-        balance_buf.seek(0)
+        # -------------------- VISUALIZATION DASHBOARD --------------------
+        st.subheader("📈 Projection Dashboard")
         
-        withdrawal_buf = io.BytesIO()
-        ax2.figure.savefig(withdrawal_buf, format='png', dpi=150)
-        withdrawal_buf.seek(0)
+        with st.spinner("Generating visualizations..."):
+            plt.style.use('seaborn')
+            
+            fig1, ax1 = plt.subplots(figsize=(10,4))
+            ax1.plot(range(year_count), balances, color='#4e79a7', linewidth=2.5)
+            ax1.set_title("Investment Balance Over Time", pad=15)
+            ax1.set_xlabel("Years Since Retirement")
+            ax1.set_ylabel("Balance (R)")
+            ax1.grid(alpha=0.3)
+            balance_buf = io.BytesIO()
+            fig1.savefig(balance_buf, format='png', dpi=150, bbox_inches='tight')
+            balance_buf.seek(0)
+            
+            fig2, ax2 = plt.subplots(figsize=(10,4))
+            ax2.bar(range(year_count), withdrawal_amounts, color='#e15759', alpha=0.7)
+            ax2.set_title("Annual Withdrawals", pad=15)
+            ax2.set_xlabel("Years Since Retirement")
+            ax2.set_ylabel("Amount (R)")
+            ax2.grid(alpha=0.3)
+            withdrawal_buf = io.BytesIO()
+            fig2.savefig(withdrawal_buf, format='png', dpi=150, bbox_inches='tight')
+            withdrawal_buf.seek(0)
 
-        # PDF Generation (Full working version)
-        if st.button("📄 Generate Living Annuity PDF Report"):
-            try:
-                pdf = FPDF(orientation='P', format='A4')
-                
-                # ===== PAGE 1: OVERVIEW & BALANCE CHART =====
-                pdf.add_page()
-                pdf.set_auto_page_break(auto=True, margin=15)
-                
-                # Header
-                pdf.set_font("Arial", 'B', 16)
-                if os.path.exists(logo_path):
-                    pdf.image(logo_path, x=10, y=8, w=25)
-                pdf.cell(0, 10, "BHJCF Studio", ln=True, align='C')
-                
-                # Title
-                pdf.set_font("Arial", 'B', 20)
-                pdf.cell(0, 10, "Living Annuity Projection", ln=True, align='C')
-                
-                # Client Info
-                pdf.set_font("Arial", '', 12)
-                pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True, align='C')
-                
-                # Data Table
-                pdf.set_font("Arial", '', 11)
-                col_width = pdf.w / 2.2
-                for label, value in [
-                    ("Current Age:", f"{la_current_age} years"),
-                    ("Retirement Age:", f"{la_retirement_age} years"),
-                    ("Investment:", f"R{investment:,.2f}"),
-                    ("Annual Return:", f"{la_return*100:.1f}%"),
-                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
-                    ("Monthly Income:", f"R{monthly_income:,.2f}"),
-                    ("Status:", f"Funds {'last beyond age 95' if year_count >=50 else f'deplete at age {la_retirement_age+year_count}'}")
-                ]:
-                    pdf.cell(col_width, 10, label)
-                    pdf.cell(0, 10, value, ln=True)
-                
-                # Balance Graph
-                pdf.add_page()
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(0, 10, "Investment Balance Timeline", ln=True, align='C')
-                pdf.image(balance_buf, x=10, w=pdf.w-20)
+        # -------------------- INTERACTIVE RESULTS DISPLAY --------------------
+        with st.expander("🔍 Detailed Findings", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(balance_buf, caption="Investment Balance", use_column_width=True)
+            with col2:
+                st.image(withdrawal_buf, caption="Annual Withdrawals", use_column_width=True)
+            
+            st.divider()
+            st.write(f"""
+            **🌡️ Sustainability Analysis**  
+            - **Projection Period**: {year_count} years ({la_retirement_age} → {la_retirement_age+year_count})  
+            - **Initial Monthly Income**: R{monthly_income:,.2f}  
+            - **Final Annual Withdrawal**: R{withdrawal_amounts[-1]:,.2f}  
+            - **Peak Balance**: R{max(balances):,.2f} (Year {balances.index(max(balances))})  
+            """)
+            
+            sustainability_ratio = min(year_count/50, 1.0)
+            st.progress(sustainability_ratio, 
+                       text=f"Sustainability Rating: {'🟢 Excellent' if sustainability_ratio >0.8 else '🟠 Moderate' if sustainability_ratio>0.5 else '🔴 Critical'}")
 
-                # ===== PAGE 2: WITHDRAWALS & ANALYSIS =====
-                pdf.add_page()
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(0, 10, "Annual Withdrawals", ln=True, align='C')
-                pdf.image(withdrawal_buf, x=10, w=pdf.w-20)
-                
-                # Tax Info
-                pdf.set_font("Arial", 'B', 14)
-                pdf.cell(0, 10, "Tax Considerations", ln=True)
-                pdf.set_font("Arial", '', 10)
-                pdf.multi_cell(0, 5, """• Withdrawals taxed as ordinary income\n• First R500k tax-free (lifetime)\n• Annual tax-free allowance applies""")
+        # -------------------- PROFESSIONAL REPORT GENERATOR --------------------
+        st.subheader("📄 Export Options")
+        report_col1, report_col2 = st.columns(2)
+        
+        with report_col1:
+            if st.button("👁️ Preview Report"):
+                with st.spinner("🖨️ Preparing preview..."):
+                    from fpdf import FPDF
+                    import time
+                    
+                    pdf = FPDF(orientation='P', format='A4')
+                    pdf.set_auto_page_break(auto=True, margin=15)
+                    
+                    # Page 1: Cover
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "BHJCF Financial Advisory", ln=True, align='C')
+                    pdf.set_font("Arial", 'B', 22)
+                    pdf.cell(0, 15, "LIVING ANNUITY PROJECTION REPORT", ln=True, align='C')
+                    pdf.ln(8)
+                    pdf.set_font("Arial", '', 12)
+                    pdf.cell(0, 8, f"Prepared for: Juanita Moolman", ln=True)
+                    pdf.cell(0, 8, f"Report Date: {time.strftime('%d %b %Y')}", ln=True)
+                    pdf.ln(15)
+                    
+                    # Key Metrics Table
+                    pdf.set_fill_color(240, 240, 240)
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(90, 10, "PARAMETER", border=1, fill=True)
+                    pdf.cell(0, 10, "VALUE", border=1, fill=True, ln=True)
+                    
+                    pdf.set_font("Arial", '', 11)
+                    for label, value in [
+                        ("Current Age", f"{la_current_age} years"),
+                        ("Retirement Age", f"{la_retirement_age} years"),
+                        ("Total Investment", f"R{investment:,.2f}"),
+                        ("Annual Return Rate", f"{la_return*100:.1f}%"),
+                        ("Withdrawal Rate", f"{withdrawal_rate*100:.1f}%"),
+                        ("Projected Monthly Income", f"R{monthly_income:,.2f}"),
+                        ("Sustainability Status", f"{'🟢 SUSTAINABLE' if year_count >=50 else '🔴 DEPLETES AT AGE '+str(la_retirement_age+year_count)}")
+                    ]:
+                        pdf.cell(90, 8, label, border=1)
+                        pdf.cell(0, 8, value, border=1, ln=True)
+                    
+                    # Page 2: Balance Graph
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "Investment Balance Trajectory", ln=True, align='C')
+                    pdf.image(balance_buf, x=10, y=30, w=pdf.w-20)
+                    pdf.set_y(100)
+                    pdf.set_font("Arial", 'I', 10)
+                    pdf.multi_cell(0, 5, 
+                        f"Note: Assumes {withdrawal_rate*100:.1f}% annual withdrawals adjusted for returns. "
+                        f"Final balance at year {year_count}: R{balances[-1]:,.2f}."
+                    )
+                    
+                    # Page 3: Withdrawals
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "Withdrawal Analysis & Tax Implications", ln=True, align='C')
+                    pdf.image(withdrawal_buf, x=10, y=30, w=pdf.w-20)
+                    pdf.set_y(100)
+                    pdf.set_font("Arial", 'B', 14)
+                    pdf.cell(0, 8, "TAX CONSIDERATIONS", ln=True)
+                    pdf.set_font("Arial", '', 10)
+                    pdf.multi_cell(0, 5, """
+                    • Withdrawals taxed as ordinary income (marginal rate applies)\n
+                    • First R500,000 cumulative withdrawals tax-free (lifetime allowance)\n
+                    • Annual tax-free portion: R128,900 (2025 tax year)\n
+                    • Compulsory annual withdrawals between 2.5%-17.5% of capital
+                    """)
+                    
+                    # Footer
+                    pdf.set_y(-15)
+                    pdf.set_font("Arial", 'I', 8)
+                    pdf.cell(0, 10, f"Generated by BHJCF Studio | {time.strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
+                    
+                    pdf_bytes = pdf.output(dest='S').encode('latin1')
+                    st.download_button(
+                        label="⬇️ Download Full Report (3 Pages)",
+                        data=pdf_bytes,
+                        file_name=f"Living_Annuity_Report_{time.strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf"
+                    )
+                    st.balloons()
 
-                # Footer
-                pdf.set_y(-20)
-                pdf.set_font("Arial", 'I', 8)
-                pdf.cell(0, 10, f"Generated {time.strftime('%Y-%m-%d')} | Page {pdf.page_no()}", 0, 0, 'C')
-
-                # Finalize PDF
-                pdf_bytes = pdf.output(dest='S').encode('latin1')
-                
+        with report_col2:
+            if st.button("📊 Export Data to CSV"):
+                import pandas as pd
+                df = pd.DataFrame({
+                    'Year': range(year_count),
+                    'Age': range(la_retirement_age, la_retirement_age+year_count),
+                    'Balance': balances,
+                    'Withdrawal': withdrawal_amounts
+                })
+                csv = df.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="⬇️ Download Full Report",
-                    data=pdf_bytes,
-                    file_name=f"Living_Annuity_Report_{time.strftime('%Y%m%d')}.pdf",
-                    mime="application/pdf"
+                    label="💾 Download CSV",
+                    data=csv,
+                    file_name=f"living_annuity_simulation_{time.strftime('%Y%m%d')}.csv",
+                    mime="text/csv"
                 )
-                st.success("PDF generated successfully!")
-
-            except Exception as e:
-                st.error(f"PDF generation failed: {str(e)}")
+                st.toast("CSV exported successfully!", icon="📊")
 
