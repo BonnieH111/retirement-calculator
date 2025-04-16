@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 import matplotlib
 matplotlib.use('Agg')  # CRITICAL FOR STREAMLIT CLOUD
 import streamlit as st
-from numpy_financial import fv, pmt
+from numpy_financial import fv
 import matplotlib.pyplot as plt
 from PIL import Image
 from fpdf import FPDF
@@ -110,6 +110,7 @@ tab1, tab2 = st.tabs(["Retirement Cash Flow", "Living Annuity"])
 # RETIREMENT CASH FLOW TAB (UPDATED)
 # ======================
 with tab1:
+    # User Inputs
     current_age = st.slider("Current Age", 25, 100, 45)
     retirement_age = st.slider("Retirement Age", 50, 100, 65)
     retirement_savings = st.number_input("Current Savings (R)", value=500000)
@@ -121,13 +122,16 @@ with tab1:
     future_value = fv(annual_return, years_to_retirement, 0, -retirement_savings)
     years_in_retirement = life_expectancy - retirement_age
 
+    # Validate Inputs
     if years_in_retirement <= 0:
         st.error("❌ Life expectancy must be GREATER than retirement age!")
         st.stop()
 
-    withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year
-                  for year in range(years_in_retirement)]
+    # Calculate Withdrawals
+    withdrawals = [future_value * withdrawal_rate * (1 + annual_return) ** year 
+                   for year in range(years_in_retirement)]
 
+    # Display Spending Plan
     st.subheader("Your Spending Plan")
     st.markdown(f"""
     <div style='margin: 20px 0; font-family: "Times New Roman", serif;'>
@@ -152,29 +156,42 @@ with tab1:
     </p>
     """, unsafe_allow_html=True)
 
+    # Plotting the Cash Flow
+    years = np.arange(years_in_retirement)
+    balances = [future_value]
+    for withdrawal in withdrawals:
+        next_balance = balances[-1] * (1 + annual_return) - withdrawal
+        balances.append(next_balance)
+
+    # Plot the cash flow
+    plt.figure(figsize=(10, 5))
+    plt.plot(years, balances[:-1], marker='o', label='Balance')
+    plt.plot(years, withdrawals, marker='x', label='Annual Withdrawals')
+    
+    plt.title("Projected Cash Flow Over Retirement")
+    plt.xlabel("Years in Retirement")
+    plt.ylabel("Amount (R)")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+
+    # Save graph to temporary location
+    graph_buf = io.BytesIO()
+    plt.savefig(graph_buf, format='png', dpi=300, bbox_inches='tight')
+    graph_buf.seek(0)
+
+    # Display the graph in the Streamlit app
+    st.image(graph_buf, caption='Projected Cash Flow', use_column_width=True)
+
     # Add PDF generation button for Cash Flow tab
     if st.button("📄 Generate Cash Flow PDF Report", key="cf_pdf_btn"):
         try:
-            # Save graph to memory buffer
-            graph_buf = io.BytesIO()
-            fig.savefig(graph_buf, format='png', dpi=300, bbox_inches='tight')
-            graph_buf.seek(0)
-
             # Create PDF
             pdf = FPDF(orientation='P', format='A4')
             pdf.add_page()
 
             # Set font for the entire PDF
-            pdf.set_font("Times", size=12)
-
-            # Add title to PDF
-            pdf.cell(200, 10, "Retirement Cash Flow Report", ln=True, align='C')
-
-            # Add data to PDF
-            pdf.cell(0, 10, f"Current Age: {current_age} years", ln=True)
-            pdf.cell(0, 10, f"Retirement Age: {retirement_age} years", ln=True)
-            pdf.cell(0, 10, f"Total Savings: R{retirement_savings:,.2f}", ln=True)
-            pdf.cell(0, 10, f"Annual Return: {annual_return
+            pdf
 
 # ======================
 # LIVING ANNUITY TAB (ENHANCED & FIXED)
@@ -254,7 +271,103 @@ with tab2:
         )
 
         # Add grid for better readability
-        ax1.grid(True, linestyle='--', alpha=0.
+        ax1.grid(True, linestyle='--', alpha=0.7)
+
+                # Second subplot: Withdrawal Amounts
+        ax2 = fig_la.add_subplot(gs[1])
+        ax2.plot(depletion_years, withdrawal_amounts, color='orange', linewidth=2.5, label='Annual Withdrawals')
+        ax2.set_title("Annual Withdrawal Amounts", color='#00BFFF', fontsize=16)
+        ax2.set_xlabel("Age", color='#228B22', fontsize=12)
+        ax2.set_ylabel("Withdrawal Amount (R)", color='orange', fontsize=12)
+        
+        # Add proper formatting to y-axis for large numbers
+        ax2.get_yaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
+        )
+        
+        # Add grid for better readability
+        ax2.grid(True, linestyle='--', alpha=0.7)
+        ax2.legend()
+
+        # Display the combined graph
+        st.pyplot(fig_la)
+
+        # PDF Generation Logic
+        if st.button("📄 Generate Living Annuity PDF Report"):
+            try:
+                pdf = FPDF(orientation='P', format='A4')
+                pdf.add_page()
+                
+                # Set auto page break and margins
+                pdf.set_auto_page_break(auto=True, margin=15)
+                pdf.set_font("Arial", 'B', 16)
+                
+                # --- Header with Logo & Name ---
+                page_width = pdf.w
+                left_margin = 15
+                right_margin = 15
+                usable_width = page_width - left_margin - right_margin
+                
+                logo_width = 25  # Reduced size
+                company_name = "BHJCF Studio"
+                
+                # Calculate centered position
+                text_width = pdf.get_string_width(company_name)
+                total_width = logo_width + text_width + 5  # 5mm gap
+                x_start = (page_width - total_width) / 2
+                
+                # Draw elements - ensure logo exists
+                if os.path.exists(logo_path):
+                    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
+                    pdf.set_xy(x_start + logo_width + 5, 17)  # Vertically aligned
+                    pdf.cell(0, 10, company_name)
+
+                # --- Title with decorative underline ---
+                pdf.set_font("Arial", 'B', 20)
+                pdf.set_y(45)  # Below header
+                title = "Living Annuity Projection Report"
+                pdf.cell(0, 10, title, align='C')
+
+                # Add decorative underline
+                title_width = pdf.get_string_width(title)
+                pdf.set_line_width(0.5)
+                pdf.set_draw_color(0, 191, 255)  # Light Blue
+                pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
+
+                # --- Client Info ---
+                pdf.set_font("Arial", 'B', 12)
+                pdf.set_y(65)
+                pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
+
+                # --- Data Table with alternating colors ---
+                pdf.set_y(80)  # Below client info
+                data = [
+                    ("Current Age:", f"{la_current_age} years"),
+                    ("Retirement Age:", f"{la_retirement_age} years"),
+                    ("Total Investment:", f"R{investment:,.2f}"),
+                    ("Annual Return:", f"{la_return * 100:.1f}%"),
+                    ("Withdrawal Rate:", f"{withdrawal_rate * 100:.1f}%"),
+                    ("Monthly Income:", f"R{monthly_income:,.2f}"),
+                    ("Funds Last:", longevity_text)
+                ]
+
+                # Create a professional table with alternating row colors
+                col_width = usable_width / 2
+                row_height = 10
+
+                for i, (label, value) in enumerate(data):
+                    # Set background color for alternating rows
+                    if i % 2 == 0:
+                        pdf.set_fill_color(240, 240, 240)  # Light gray
+                    else:
+                        pdf.set_fill_color(255, 255, 255)  # White
+
+                    pdf.set_x(left_margin)
+                    pdf.set_font("Arial", 'B', 11)
+                    pdf.cell(col_width, row_height, label, 0, 0, 'L', True)
+
+                    pdf.set_font("Arial", '', 11)
+                    pdf.cell(col_width, row_height, value, 0, 1, 'R', True)
 
 # ===== PAGE 1: OVERVIEW & BALANCE CHART =====
 pdf.add_page()
@@ -303,8 +416,8 @@ data = [
     ("Current Age:", f"{st.session_state.la_data['la_current_age']} years"),
     ("Retirement Age:", f"{st.session_state.la_data['la_retirement_age']} years"),
     ("Total Investment:", f"R{st.session_state.la_data['investment']:,.2f}"),
-    ("Annual Return:", f"{st.session_state.la_data['la_return']*100:.1f}%"),
-    ("Withdrawal Rate:", f"{st.session_state.la_data['withdrawal_rate']*100:.1f}%"),
+    ("Annual Return:", f"{st.session_state.la_data['la_return'] * 100:.1f}%"),
+    ("Withdrawal Rate:", f"{st.session_state.la_data['withdrawal_rate'] * 100:.1f}%"),
     ("Monthly Income:", f"R{st.session_state.la_data['monthly_income']:,.2f}"),
     ("Longevity:", f"{st.session_state.la_data['year_count']} years"),
     ("Status:", f"{st.session_state.la_data['longevity_text']}")
@@ -340,82 +453,81 @@ graph_y = pdf.get_y() + 5
 # Insert the graph image
 graph_width = usable_width  # Full width within margins
 pdf.image(balance_buf,
-          x=left_margin
+          x=left_margin,
+          w=graph_width)
 
-                # ===== PAGE 2: WITHDRAWAL CHART & TAX INFO =====
-                pdf.add_page()
+# ===== PAGE 2: WITHDRAWAL CHART & TAX INFO =====
+pdf.add_page()
 
-                # --- Header with Logo & Name (repeated for page 2) ---
-                pdf.set_font("Arial", 'B', 16)
-                if os.path.exists(logo_path):
-                    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
-                    pdf.set_xy(x_start + logo_width + 5, 17)
-                    pdf.cell(0, 10, company_name)
+# --- Header with Logo & Name (repeated for page 2) ---
+pdf.set_font("Arial", 'B', 16)
+if os.path.exists(logo_path):
+    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
+    pdf.set_xy(x_start + logo_width + 5, 17)
+    pdf.cell(0, 10, company_name)
 
-                # --- Page 2 Title ---
-                pdf.set_font("Arial", 'B', 16)
-                pdf.set_y(40)
-                pdf.cell(0, 10, "Annual Withdrawal Projection", align='C')
+# --- Page 2 Title ---
+pdf.set_font("Arial", 'B', 16)
+pdf.set_y(40)
+pdf.cell(0, 10, "Annual Withdrawal Projection", align='C')
 
-                # --- Withdrawal Graph ---
-                graph_y = 55
+# --- Withdrawal Graph ---
+graph_y = 55
 
-                # Insert the withdrawal graph image
-                pdf.image(withdrawal_buf,
-                          x=left_margin,
-                          y=graph_y,
-                          w=graph_width)
+# Insert the withdrawal graph image
+pdf.image(withdrawal_buf,
+          x=left_margin,
+          y=graph_y,
+          w=graph_width)
 
-                # Add explanatory note below graph
-                pdf.set_y(graph_y + 85)
-                pdf.set_font("Arial", 'I', 9)
-                pdf.set_text_color(100, 100, 100)
-                pdf.multi_cell(0, 5, "This chart shows your projected annual withdrawal amounts. The orange area represents the money available for your yearly expenses.", 0, 'L')
+# Add explanatory note below graph
+pdf.set_y(graph_y + 85)
+pdf.set_font("Arial", 'I', 9)
+pdf.set_text_color(100, 100, 100)
+pdf.multi_cell(0, 5, "This chart shows your projected annual withdrawal amounts. The orange area represents the money available for your yearly expenses.", 0, 'L')
 
-                # --- Tax Information Section (Optional, added for value) ---
-                pdf.set_y(graph_y + 100)
-                pdf.set_font("Arial", 'B', 14)
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(0, 10, "Tax Considerations", 0, 1, 'L')
+# --- Tax Information Section (Optional, added for value) ---
+pdf.set_y(graph_y + 100)
+pdf.set_font("Arial", 'B', 14)
+pdf.set_text_color(0, 0, 0)
+pdf.cell(0, 10, "Tax Considerations", 0, 1, 'L')
 
-                pdf.set_font("Arial", '', 10)
-                tax_info = """
-                Withdrawals from living annuities are taxed as income in South Africa. The applicable tax rates depend on your total taxable income for the year. Here's a general overview:
+pdf.set_font("Arial", '', 10)
+tax_info = """
+Withdrawals from living annuities are taxed as income in South Africa. The applicable tax rates depend on your total taxable income for the year. Here's a general overview:
 
-                1. Your withdrawals are added to your other income and taxed according to SARS income tax tables.
-                2. At retirement, you may receive a portion of your retirement interest tax-free (up to R500,000 lifetime limit).
-                3. The withdrawal rate you choose (between 2.5% and 17.5%) affects your long-term tax efficiency.
-                4. Lower withdrawal rates may lead to estate duty implications, while higher rates may deplete your capital.
+1. Your withdrawals are added to your other income and taxed according to SARS income tax tables.
+2. At retirement, you may receive a portion of your retirement interest tax-free (up to R500,000 lifetime limit).
+3. The withdrawal rate you choose (between 2.5% and 17.5%) affects your long-term tax efficiency.
+4. Lower withdrawal rates may lead to estate duty implications, while higher rates may deplete your capital.
 
-                Consult with a tax professional for personalized advice based on your specific situation.
-                """
-                pdf.multi_cell(0, 5, tax_info, 0, 'L')
+Consult with a tax professional for personalized advice based on your specific situation.
+"""
+pdf.multi_cell(0, 5, tax_info, 0, 'L')
 
-                # Add a disclaimer to both pages
-                pdf.set_y(-40)
-                pdf.set_font("Arial", 'I', 8)
-                pdf.set_text_color(150, 150, 150)
-                pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
+# Add a disclaimer to both pages
+pdf.set_y(-40)
+pdf.set_font("Arial", 'I', 8)
+pdf.set_text_color(150, 150, 150)
+pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
 
-                # Footer with page number
-                pdf.set_y(-20)
-                pdf.set_font("Arial", 'I', 8)
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(0, 10, f"BHJCF Studio Living Annuity Calculator | Page {pdf.page_no()} of 2", 0, 0, 'C')
+# Footer with page number
+pdf.set_y(-20)
+pdf.set_font("Arial", 'I', 8)
+pdf.set_text_color(0, 0, 0)
+pdf.cell(0, 10, f"BHJCF Studio Living Annuity Calculator | Page {pdf.page_no()} of 2", 0, 0, 'C')
 
-                # Save PDF to memory
-                pdf_output = io.BytesIO()
-                pdf.output(pdf_output)
-                pdf_data = pdf_output.getvalue()
+# Save PDF to memory
+pdf_output = io.BytesIO()
+pdf.output(pdf_output)
+pdf_data = pdf_output.getvalue()
 
-                # Download button
-                st.download_button(
-                    label="⬇️ Download Living Annuity Report",
-                    data=pdf_data,
-                    file_name="Juanita_Living_Annuity_Report.pdf",
-                    mime="application/pdf",
-                    help="Click to download your detailed Living Annuity PDF report"
-                )
-            except Exception as e:
-                st.error(f"❌ PDF generation failed: {str(e)}") 
+# Download button
+st.download_button(
+    label="⬇️ Download Living Annuity Report",
+    data=pdf_data,
+    file_name="Juanita_Living_Annuity_Report.pdf",
+    mime="application/pdf",
+    help="Click to download your detailed Living Annuity PDF report"
+) 
 
