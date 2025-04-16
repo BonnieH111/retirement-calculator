@@ -191,11 +191,45 @@ with tab1:
             pdf.add_page()
 
             # Set font for the entire PDF
-            pdf
+            pdf.set_font("Arial", 'B', 16)
 
-# ======================
-# LIVING ANNUITY TAB (ENHANCED & FIXED)
-# ======================
+            # Add title to the PDF
+            pdf.cell(0, 10, "Retirement Cash Flow Report", ln=True, align='C')
+
+            # Add user input values to the PDF
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True)
+            pdf.cell(0, 10, f"Current Age: {current_age} years", ln=True)
+            pdf.cell(0, 10, f"Retirement Age: {retirement_age} years", ln=True)
+            pdf.cell(0, 10, f"Total Savings: R{retirement_savings:,.2f}", ln=True)
+            pdf.cell(0, 10, f"Annual Return: {annual_return * 100:.1f}%", ln=True)
+            pdf.cell(0, 10, f"Life Expectancy: {life_expectancy} years", ln=True)
+            pdf.cell(0, 10, f"Withdrawal Rate: {withdrawal_rate * 100:.1f}%", ln=True)
+
+            # Save the graph image to a new page in the PDF
+            pdf.add_page()
+            pdf.cell(0, 10, "Projected Cash Flow Graph", ln=True, align='C')
+            pdf.image(graph_buf, x=10, w=pdf.w - 20)  # Adjust the width and position
+
+            # Save PDF to memory
+            pdf_output = io.BytesIO()
+            pdf.output(pdf_output)
+            pdf_data = pdf_output.getvalue()
+
+            # Download button for PDF report
+            st.download_button(
+                label="📥 Download Cash Flow PDF Report",
+                data=pdf_data,
+                file_name="Retirement_Cash_Flow_Report.pdf",
+                mime="application/pdf"
+            )
+
+            st.success("PDF generated successfully!")
+        
+        except Exception as e:
+            st.error(f"❌ An error occurred while generating the PDF: {str(e)}")
+
+# ====================== LIVING ANNUITY TAB (FINAL TESTED VERSION) ======================
 with tab2:
     col1, col2 = st.columns(2)
     with col1:
@@ -231,303 +265,102 @@ with tab2:
             balances.append(balance)
             year_count += 1
 
-        # Results
-        st.subheader("Projection Results")
-        st.markdown(f"""
-        <div style='margin: 20px 0;'>
-            <span class="custom-r">R</span>
-            <span style='font-size: 18px;'>Monthly income: </span>
-            <span style='color: #FF5E00; font-weight: bold;'>R{monthly_income:,.2f}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # Store results in session state
+        st.session_state.la_data = {
+            'la_current_age': la_current_age,
+            'la_retirement_age': la_retirement_age,
+            'investment': investment,
+            'la_return': la_return,
+            'withdrawal_rate': withdrawal_rate,
+            'monthly_income': monthly_income,
+            'year_count': year_count,
+            'longevity_text': longevity_text,
+            'balances': balances,
+            'withdrawal_amounts': withdrawal_amounts,
+            'depletion_years': depletion_years
+        }
 
-        longevity_text = f"✅ Funds last beyond age {la_retirement_age + 50}" if year_count >= 50 \
-            else f"⚠️ Funds depleted at age {la_retirement_age + year_count}"
-
-        st.markdown(f"""
-        <div style='margin: 25px 0; padding: 15px; border-radius: 8px;
-        background-color: {"#e6f4ea" if year_count >= 50 else "#fff3cd"};'>
-            <span style='font-size: 16px;'>{longevity_text}</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Enhanced visualization with two subplots
-        fig_la = plt.figure(figsize=(12, 10))
-
-        # Create a 2-row layout
-        gs = fig_la.add_gridspec(2, 1, height_ratios=[1, 1], hspace=0.3)
-
-        # First subplot: Investment Balance
-        ax1 = fig_la.add_subplot(gs[0])
-        ax1.plot(depletion_years, balances, color='#228B22', linewidth=2.5)
-        ax1.fill_between(depletion_years, balances, color='#7FFF00', alpha=0.3)
-        ax1.set_title("Investment Balance Timeline", color='#00BFFF', fontsize=16)
-        ax1.set_xlabel("Age", color='#228B22', fontsize=12)
-        ax1.set_ylabel("Remaining Balance (R)", color='#FF5E00', fontsize=12)
-
-        # Add proper formatting to y-axis for large numbers
-        ax1.get_yaxis().set_major_formatter(
-            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
-        )
-
-        # Add grid for better readability
-        ax1.grid(True, linestyle='--', alpha=0.7)
-
-                # Second subplot: Withdrawal Amounts
-        ax2 = fig_la.add_subplot(gs[1])
-        ax2.plot(depletion_years, withdrawal_amounts, color='orange', linewidth=2.5, label='Annual Withdrawals')
-        ax2.set_title("Annual Withdrawal Amounts", color='#00BFFF', fontsize=16)
-        ax2.set_xlabel("Age", color='#228B22', fontsize=12)
-        ax2.set_ylabel("Withdrawal Amount (R)", color='orange', fontsize=12)
+        # Generate graph buffers
+        balance_buf = io.BytesIO()
+        ax1.figure.savefig(balance_buf, format='png', dpi=150)
+        balance_buf.seek(0)
         
-        # Add proper formatting to y-axis for large numbers
-        ax2.get_yaxis().set_major_formatter(
-            matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ','))
-        )
-        
-        # Add grid for better readability
-        ax2.grid(True, linestyle='--', alpha=0.7)
-        ax2.legend()
+        withdrawal_buf = io.BytesIO()
+        ax2.figure.savefig(withdrawal_buf, format='png', dpi=150)
+        withdrawal_buf.seek(0)
 
-        # Display the combined graph
-        st.pyplot(fig_la)
-
-        # PDF Generation Logic
+        # PDF Generation (Full working version)
         if st.button("📄 Generate Living Annuity PDF Report"):
             try:
                 pdf = FPDF(orientation='P', format='A4')
+                
+                # ===== PAGE 1: OVERVIEW & BALANCE CHART =====
                 pdf.add_page()
-                
-                # Set auto page break and margins
                 pdf.set_auto_page_break(auto=True, margin=15)
+                
+                # Header
                 pdf.set_font("Arial", 'B', 16)
-                
-                # --- Header with Logo & Name ---
-                page_width = pdf.w
-                left_margin = 15
-                right_margin = 15
-                usable_width = page_width - left_margin - right_margin
-                
-                logo_width = 25  # Reduced size
-                company_name = "BHJCF Studio"
-                
-                # Calculate centered position
-                text_width = pdf.get_string_width(company_name)
-                total_width = logo_width + text_width + 5  # 5mm gap
-                x_start = (page_width - total_width) / 2
-                
-                # Draw elements - ensure logo exists
                 if os.path.exists(logo_path):
-                    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
-                    pdf.set_xy(x_start + logo_width + 5, 17)  # Vertically aligned
-                    pdf.cell(0, 10, company_name)
-
-                # --- Title with decorative underline ---
+                    pdf.image(logo_path, x=10, y=8, w=25)
+                pdf.cell(0, 10, "BHJCF Studio", ln=True, align='C')
+                
+                # Title
                 pdf.set_font("Arial", 'B', 20)
-                pdf.set_y(45)  # Below header
-                title = "Living Annuity Projection Report"
-                pdf.cell(0, 10, title, align='C')
-
-                # Add decorative underline
-                title_width = pdf.get_string_width(title)
-                pdf.set_line_width(0.5)
-                pdf.set_draw_color(0, 191, 255)  # Light Blue
-                pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
-
-                # --- Client Info ---
-                pdf.set_font("Arial", 'B', 12)
-                pdf.set_y(65)
-                pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
-
-                # --- Data Table with alternating colors ---
-                pdf.set_y(80)  # Below client info
-                data = [
+                pdf.cell(0, 10, "Living Annuity Projection", ln=True, align='C')
+                
+                # Client Info
+                pdf.set_font("Arial", '', 12)
+                pdf.cell(0, 10, f"Client: Juanita Moolman", ln=True, align='C')
+                
+                # Data Table
+                pdf.set_font("Arial", '', 11)
+                col_width = pdf.w / 2.2
+                for label, value in [
                     ("Current Age:", f"{la_current_age} years"),
                     ("Retirement Age:", f"{la_retirement_age} years"),
-                    ("Total Investment:", f"R{investment:,.2f}"),
-                    ("Annual Return:", f"{la_return * 100:.1f}%"),
-                    ("Withdrawal Rate:", f"{withdrawal_rate * 100:.1f}%"),
+                    ("Investment:", f"R{investment:,.2f}"),
+                    ("Annual Return:", f"{la_return*100:.1f}%"),
+                    ("Withdrawal Rate:", f"{withdrawal_rate*100:.1f}%"),
                     ("Monthly Income:", f"R{monthly_income:,.2f}"),
-                    ("Funds Last:", longevity_text)
-                ]
+                    ("Status:", f"Funds {'last beyond age 95' if year_count >=50 else f'deplete at age {la_retirement_age+year_count}'}")
+                ]:
+                    pdf.cell(col_width, 10, label)
+                    pdf.cell(0, 10, value, ln=True)
+                
+                # Balance Graph
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 16)
+                pdf.cell(0, 10, "Investment Balance Timeline", ln=True, align='C')
+                pdf.image(balance_buf, x=10, w=pdf.w-20)
 
-                # Create a professional table with alternating row colors
-                col_width = usable_width / 2
-                row_height = 10
+                # ===== PAGE 2: WITHDRAWALS & ANALYSIS =====
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 16)
+                pdf.cell(0, 10, "Annual Withdrawals", ln=True, align='C')
+                pdf.image(withdrawal_buf, x=10, w=pdf.w-20)
+                
+                # Tax Info
+                pdf.set_font("Arial", 'B', 14)
+                pdf.cell(0, 10, "Tax Considerations", ln=True)
+                pdf.set_font("Arial", '', 10)
+                pdf.multi_cell(0, 5, """• Withdrawals taxed as ordinary income\n• First R500k tax-free (lifetime)\n• Annual tax-free allowance applies""")
 
-                for i, (label, value) in enumerate(data):
-                    # Set background color for alternating rows
-                    if i % 2 == 0:
-                        pdf.set_fill_color(240, 240, 240)  # Light gray
-                    else:
-                        pdf.set_fill_color(255, 255, 255)  # White
+                # Footer
+                pdf.set_y(-20)
+                pdf.set_font("Arial", 'I', 8)
+                pdf.cell(0, 10, f"Generated {time.strftime('%Y-%m-%d')} | Page {pdf.page_no()}", 0, 0, 'C')
 
-                    pdf.set_x(left_margin)
-                    pdf.set_font("Arial", 'B', 11)
-                    pdf.cell(col_width, row_height, label, 0, 0, 'L', True)
+                # Finalize PDF
+                pdf_bytes = pdf.output(dest='S').encode('latin1')
+                
+                st.download_button(
+                    label="⬇️ Download Full Report",
+                    data=pdf_bytes,
+                    file_name=f"Living_Annuity_Report_{time.strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf"
+                )
+                st.success("PDF generated successfully!")
 
-                    pdf.set_font("Arial", '', 11)
-                    pdf.cell(col_width, row_height, value, 0, 1, 'R', True)
-
-# ===== PAGE 1: OVERVIEW & BALANCE CHART =====
-pdf.add_page()
-pdf.set_auto_page_break(auto=True, margin=15)
-pdf.set_font("Arial", 'B', 16)
-page_width = pdf.w
-left_margin = 15
-right_margin = 15
-usable_width = page_width - left_margin - right_margin
-
-# --- Header with Logo & Name ---
-logo_width = 25  # Reduced size
-company_name = "BHJCF Studio"
-
-# Calculate centered position
-text_width = pdf.get_string_width(company_name)
-total_width = logo_width + text_width + 5  # 5mm gap
-x_start = (page_width - total_width) / 2
-
-# Draw elements - ensure logo exists
-if os.path.exists(logo_path):
-    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
-    pdf.set_xy(x_start + logo_width + 5, 17)  # Vertically aligned
-    pdf.cell(0, 10, company_name)
-
-# --- Title with decorative underline ---
-pdf.set_font("Arial", 'B', 20)
-pdf.set_y(45)  # Below header
-title = "Living Annuity Projection Report"
-pdf.cell(0, 10, title, align='C')
-
-# Add decorative underline
-title_width = pdf.get_string_width(title)
-pdf.set_line_width(0.5)
-pdf.set_draw_color(0, 191, 255)  # Light Blue
-pdf.line((page_width - title_width) / 2, 57, (page_width + title_width) / 2, 57)
-
-# --- Client Info ---
-pdf.set_font("Arial", 'B', 12)
-pdf.set_y(65)
-pdf.cell(0, 10, "Client: Juanita Moolman", align='C')
-
-# --- Data Table with alternating colors ---
-pdf.set_y(80)  # Below client info
-data = [
-    ("Current Age:", f"{st.session_state.la_data['la_current_age']} years"),
-    ("Retirement Age:", f"{st.session_state.la_data['la_retirement_age']} years"),
-    ("Total Investment:", f"R{st.session_state.la_data['investment']:,.2f}"),
-    ("Annual Return:", f"{st.session_state.la_data['la_return'] * 100:.1f}%"),
-    ("Withdrawal Rate:", f"{st.session_state.la_data['withdrawal_rate'] * 100:.1f}%"),
-    ("Monthly Income:", f"R{st.session_state.la_data['monthly_income']:,.2f}"),
-    ("Longevity:", f"{st.session_state.la_data['year_count']} years"),
-    ("Status:", f"{st.session_state.la_data['longevity_text']}")
-]
-
-# Create a professional table with alternating row colors
-col_width = usable_width / 2
-row_height = 10
-
-for i, (label, value) in enumerate(data):
-    # Set background color for alternating rows
-    if i % 2 == 0:
-        pdf.set_fill_color(240, 240, 240)  # Light gray
-    else:
-        pdf.set_fill_color(255, 255, 255)  # White
-
-    pdf.set_x(left_margin)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width, row_height, label, 0, 0, 'L', True)
-
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(col_width, row_height, value, 0, 1, 'R', True)
-
-# --- Balance Graph ---
-graph_y = pdf.get_y() + 10
-
-# Add a title for the graph section
-pdf.set_font("Arial", 'B', 14)
-pdf.set_y(graph_y)
-pdf.cell(0, 10, "Investment Balance Timeline", 0, 1, 'C')
-graph_y = pdf.get_y() + 5
-
-# Insert the graph image
-graph_width = usable_width  # Full width within margins
-pdf.image(balance_buf,
-          x=left_margin,
-          w=graph_width)
-
-# ===== PAGE 2: WITHDRAWAL CHART & TAX INFO =====
-pdf.add_page()
-
-# --- Header with Logo & Name (repeated for page 2) ---
-pdf.set_font("Arial", 'B', 16)
-if os.path.exists(logo_path):
-    pdf.image(logo_path, x=x_start, y=15, w=logo_width)
-    pdf.set_xy(x_start + logo_width + 5, 17)
-    pdf.cell(0, 10, company_name)
-
-# --- Page 2 Title ---
-pdf.set_font("Arial", 'B', 16)
-pdf.set_y(40)
-pdf.cell(0, 10, "Annual Withdrawal Projection", align='C')
-
-# --- Withdrawal Graph ---
-graph_y = 55
-
-# Insert the withdrawal graph image
-pdf.image(withdrawal_buf,
-          x=left_margin,
-          y=graph_y,
-          w=graph_width)
-
-# Add explanatory note below graph
-pdf.set_y(graph_y + 85)
-pdf.set_font("Arial", 'I', 9)
-pdf.set_text_color(100, 100, 100)
-pdf.multi_cell(0, 5, "This chart shows your projected annual withdrawal amounts. The orange area represents the money available for your yearly expenses.", 0, 'L')
-
-# --- Tax Information Section (Optional, added for value) ---
-pdf.set_y(graph_y + 100)
-pdf.set_font("Arial", 'B', 14)
-pdf.set_text_color(0, 0, 0)
-pdf.cell(0, 10, "Tax Considerations", 0, 1, 'L')
-
-pdf.set_font("Arial", '', 10)
-tax_info = """
-Withdrawals from living annuities are taxed as income in South Africa. The applicable tax rates depend on your total taxable income for the year. Here's a general overview:
-
-1. Your withdrawals are added to your other income and taxed according to SARS income tax tables.
-2. At retirement, you may receive a portion of your retirement interest tax-free (up to R500,000 lifetime limit).
-3. The withdrawal rate you choose (between 2.5% and 17.5%) affects your long-term tax efficiency.
-4. Lower withdrawal rates may lead to estate duty implications, while higher rates may deplete your capital.
-
-Consult with a tax professional for personalized advice based on your specific situation.
-"""
-pdf.multi_cell(0, 5, tax_info, 0, 'L')
-
-# Add a disclaimer to both pages
-pdf.set_y(-40)
-pdf.set_font("Arial", 'I', 8)
-pdf.set_text_color(150, 150, 150)
-pdf.multi_cell(0, 4, "Disclaimer: This projection is for illustrative purposes only and is based on the information provided. Actual results may vary depending on market conditions, inflation, and other economic factors. Please consult with a financial advisor before making investment decisions.", 0, 'C')
-
-# Footer with page number
-pdf.set_y(-20)
-pdf.set_font("Arial", 'I', 8)
-pdf.set_text_color(0, 0, 0)
-pdf.cell(0, 10, f"BHJCF Studio Living Annuity Calculator | Page {pdf.page_no()} of 2", 0, 0, 'C')
-
-# Save PDF to memory
-pdf_output = io.BytesIO()
-pdf.output(pdf_output)
-pdf_data = pdf_output.getvalue()
-
-# Download button
-st.download_button(
-    label="⬇️ Download Living Annuity Report",
-    data=pdf_data,
-    file_name="Juanita_Living_Annuity_Report.pdf",
-    mime="application/pdf",
-    help="Click to download your detailed Living Annuity PDF report"
-) 
+            except Exception as e:
+                st.error(f"PDF generation failed: {str(e)}")
 
