@@ -3,3 +3,4 @@ fpdf2>=2.0.0
 matplotlib>=3.7.0
 numpy-financial>=1.0.0
 
+fonttools>=4.61.0 # not directly required, pinned by Snyk to avoid a vulnerability
